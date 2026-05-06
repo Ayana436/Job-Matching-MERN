@@ -3,7 +3,7 @@ import Job from '../models/Job.js';
 
 const router = express.Router();
 
-// 1. Route to CREATE a new job (Already there)
+// 1. CREATE a new job (Updated to include new fields)
 router.post('/add', async (req, res) => {
     try {
         const newJob = new Job(req.body);
@@ -14,41 +14,55 @@ router.post('/add', async (req, res) => {
     }
 });
 
-// 2. Route to GET ALL jobs (New)
-router.get('/all', async (req, res) => {
+// 2. ADVANCED SEARCH & FILTER
+// Use this for: http://localhost:5000/api/jobs/search?location=Remote&skill=React
+router.get('/search', async (req, res) => {
     try {
-        const jobs = await Job.find().sort({ createdAt: -1 }); // -1 shows newest first
+        const { skill, title, location, jobType } = req.query;
+        let query = {};
+
+        if (skill) query.requiredSkills = { $in: [new RegExp(skill, 'i')] };
+        if (title) query.title = new RegExp(title, 'i');
+        if (location) query.location = new RegExp(location, 'i');
+        if (jobType) query.jobType = jobType;
+
+        const jobs = await Job.find(query).sort({ createdAt: -1 });
         res.status(200).json(jobs);
     } catch (err) {
-        res.status(500).json({ error: 'Server error while fetching jobs' });
+        res.status(500).json({ error: 'Search failed' });
     }
 });
 
-// 3. Route to MATCH jobs based on skills
+// 3. SMART MATCHING (Resume Text Parsing)
 router.post('/match', async (req, res) => {
     try {
-        const { userSkills } = req.body; // e.g., ["MongoDB", "React"]
+        const { resumeText } = req.body;
+        if (!resumeText) return res.status(400).json({ error: "Resume text is required" });
+
         const allJobs = await Job.find();
 
         const matches = allJobs.map(job => {
-            // Check how many skills match
+            // Check for skills inside the text using Regex
             const matchedSkills = job.requiredSkills.filter(skill => 
-                userSkills.includes(skill)
+                new RegExp(`\\b${skill}\\b`, 'i').test(resumeText)
             );
 
-            // Calculate percentage
-            const score = (matchedSkills.length / job.requiredSkills.length) * 100;
+            const score = job.requiredSkills.length > 0 
+                ? (matchedSkills.length / job.requiredSkills.length) * 100 
+                : 0;
 
             return {
+                jobId: job._id,
                 jobTitle: job.title,
-                score: Math.round(score),
-                matchedSkills: matchedSkills,
-                missingSkills: job.requiredSkills.filter(s => !userSkills.includes(s))
+                location: job.location,
+                matchScore: `${Math.round(score)}%`,
+                matchedSkills,
+                missingSkills: job.requiredSkills.filter(s => !matchedSkills.includes(s))
             };
         });
 
-        // Sort by highest score
-        res.status(200).json(matches.sort((a, b) => b.score - a.score));
+        // Sort by highest match score
+        res.status(200).json(matches.sort((a, b) => parseInt(b.matchScore) - parseInt(a.matchScore)));
     } catch (err) {
         res.status(500).json({ error: 'Matching process failed' });
     }
