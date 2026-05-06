@@ -1,0 +1,2 @@
+MONGO_URI:mongodb+srv://admin_user:saveNDccure1@cluster0.pdienec.mongodb.net/jobmatching=Cluster0
+PORT=5000
