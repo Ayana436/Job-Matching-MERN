@@ -1,3 +1,41 @@
+/* SLEEK NAVIGATION */
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 5%;
+  background: #1a1a1a;
+  color: white;
+}
+
+.nav-links {
+  display: flex;
+  gap: 20px;
+}
+
+.nav-link {
+  text-decoration: none;
+  color: #ccc;
+  font-weight: 500;
+  transition: 0.3s;
+}
+
+.nav-link:hover {
+  color: #646cff;
+}
+
+.admin-btn {
+  background: #646cff;
+  color: white !important;
+  padding: 5px 15px;
+  border-radius: 6px;
+}
+
+.admin-btn:hover {
+  background: #535bf2;
+}
+
+
 .counter {
   font-size: 16px;
   padding: 5px 10px;
