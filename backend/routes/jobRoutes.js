@@ -16,13 +16,15 @@ router.get('/search', async (req, res) => {
                 $or: [
                     { title: searchRegex },
                     { location: searchRegex },
-                    { requiredSkills: { $in: [searchRegex] } }
+                    { requiredSkills: searchRegex }
                 ]
             };
         }
         const jobs = await Job.find(query).sort({ createdAt: -1 });
+        console.log(`Search for "${req.query.q}" found ${jobs.length} jobs`);
         res.status(200).json(jobs);
     } catch (err) {
+        console.log("Search Error:", err);
         res.status(500).json({ error: 'Search failed' });
     }
 });
@@ -60,7 +62,7 @@ router.post('/match', async (req, res) => {
         // Only return jobs that have at least one skill match (> 0%)
         const filteredMatches = matches
             .filter(m => m.matchScore > 0)
-            .sort((a, b) => b.matchScore - a.score);
+            .sort((a, b) => b.matchScore - a.matchScore);
 
         res.status(200).json(filteredMatches);
     } catch (err) {
@@ -105,8 +107,8 @@ router.post('/match-pdf', async (req, res) => {
         const allJobs = await Job.find();
         const matches = allJobs.map(job => {
             const matchedSkills = job.requiredSkills.filter(skill => {
-                const safeSkill = skill.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                return new RegExp(`\\b${safeSkill}\\b`, 'i').test(resumeText);
+                const regex = new RegExp(`\\b${skill}\\b`, 'i');
+        return regex.test(resumeText);
             });
 
             const score = job.requiredSkills.length > 0 
@@ -118,7 +120,8 @@ router.post('/match-pdf', async (req, res) => {
                 title: job.title,
                 location: job.location,
                 matchScore: Math.round(score),
-                matchedSkills
+                matchedSkills: matchedSkills,
+                missingSkills: job.requiredSkills.filter(s =>!matchedSkills.includes(s))
             };
         });
 
