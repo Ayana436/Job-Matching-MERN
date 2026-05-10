@@ -2,63 +2,103 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 
 const CandidateView = () => {
-    // Start loading as false so initial fetch works silently
     const [loading, setLoading] = useState(false);
     const [jobs, setJobs] = useState([]);
     const [searchTerm, setSearchTerm] = useState("");
     const [matches, setMatches] = useState([]);
     const [viewMode, setViewMode] = useState("all");
 
-    // 1. Fetch Jobs on initial load
-    useEffect(() => { 
-        fetchJobs(); 
-    }, []);
+    // Separate component for the Job Card to handle individual "Expanded" states
+    const JobCard = ({ job, viewMode }) => {
+        const [isExpanded, setIsExpanded] = useState(false);
 
-    // 2. Search Function
-    const fetchJobs = async (query = "") => {
-        try {
-            console.log("Fetching jobs for:", query);
-            const res = await axios.get(`/api/jobs/search?q=${query}`);
-            setJobs(res.data);
-            setViewMode("all"); // Switch back to 'all' view when searching
-            console.log("Jobs found:", res.data.length);
-        } catch (err) { 
-            console.error("Search Failed:", err); 
-        }
+        return (
+            <div className="job-card">
+                <div className="job-header">
+                    <h4>{job.title}</h4>
+                    {viewMode === "matches" && job.matchScore !== undefined && (
+                        <div className="match-container">
+                            <div className="progress-bar">
+                                <div className="progress-fill" style={{ width: `${job.matchScore}%` }}></div>
+                            </div>
+                            <span className="match-text">{job.matchScore}% Match</span>
+                        </div>
+                    )}
+                </div>
+                
+                <p className="job-location">📍 {job.location || "Remote"}</p>
+
+                <div className="skills-analysis">
+                    {viewMode === "matches" && (
+                        <p style={{ fontSize: '0.8rem', color: '#888', marginBottom: '5px' }}>Skill Analysis:</p>
+                    )}
+                    <div className="skill-chips">
+                        {viewMode === "matches" ? (
+                            <>
+                                {job.matchedSkills?.map(s => <span key={s} className="chip match">✔ {s}</span>)}
+                                {job.missingSkills?.map(s => <span key={s} className="chip missing">✘ {s}</span>)}
+                            </>
+                        ) : (
+                            job.requiredSkills?.map(s => <span key={s} className="chip">{s}</span>)
+                        )}
+                    </div>
+                </div>
+
+                {/* EXPANDABLE DETAILS SECTION */}
+                <div className={`details-drawer ${isExpanded ? 'open' : ''}`}>
+                    <div className="details-content">
+                        <hr style={{ border: '0.5px solid #333', margin: '15px 0' }} />
+                        <h5>Full Job Description</h5>
+                        <p>{job.description || "No description provided."}</p>
+                        
+                        <div className="job-meta">
+                            <span><strong>Type:</strong> {job.jobType || "Full-time"}</span>
+                            <span><strong>Level:</strong> {job.experienceLevel || "Entry Level"}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <button 
+                    className="btn-text-only" 
+                    onClick={() => setIsExpanded(!isExpanded)}
+                >
+                    {isExpanded ? '🔼 Show Less' : '🔽 View Details'}
+                </button>
+            </div>
+        );
     };
 
-    // 3. PDF Match Function with simulated delay for UX
+    useEffect(() => { fetchJobs(); }, []);
+
+    const fetchJobs = async (query = "") => {
+        try {
+            const res = await axios.get(`/api/jobs/search?q=${query}`);
+            setJobs(res.data);
+            setViewMode("all");
+        } catch (err) { console.error("Search Failed:", err); }
+    };
+
     const handlePdfUpload = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
-
-        setLoading(true); 
-        console.log("AI Analysis started...");
-
+        setLoading(true);
         const formData = new FormData();
         formData.append('resume', file);
-
         try {
             const res = await axios.post('/api/jobs/match-pdf', formData);
-            
-            // Artificial delay so the user sees the cool spinner
             setTimeout(() => {
                 setMatches(res.data);
                 setViewMode("matches");
                 setLoading(false);
-                console.log("AI Analysis complete.");
-            }, 2000); 
-
+            }, 2000);
         } catch (err) {
-            console.error("Upload failed:", err);
             setLoading(false);
-            alert("Failed to process resume. Please try again.");
+            alert("Error matching PDF");
         }
     };
 
     return (
         <div className="fade-in">
-            {/* HERO SECTION */}
             <div className="card hero-card">
                 <h2>Find Your Perfect Match</h2>
                 <p>Upload your resume to see which jobs fit your skills best.</p>
@@ -70,7 +110,6 @@ const CandidateView = () => {
                 </div>
             </div>
 
-            {/* SEARCH SECTION */}
             <div className="card">
                 <div className="search-header">
                     <input 
@@ -84,63 +123,19 @@ const CandidateView = () => {
 
                 <h3>{viewMode === "matches" ? "🎯 Top Matches for You" : "💼 Available Positions"}</h3>
 
-                {/* DYNAMIC RESULTS AREA */}
                 {loading ? (
-                    /* SPINNER VIEW */
                     <div className="loader-overlay">
                         <div className="spinner"></div>
                         <h2 className="loading-text">AI Scanning Engine Active...</h2>
                         <p>Analyzing your resume against Cluster0 database</p>
                     </div>
                 ) : (
-                    /* RESULTS LIST */
                     <div className="results-list">
                         {(viewMode === "matches" ? matches : jobs).length > 0 ? (
                             (viewMode === "matches" ? matches : jobs).map((job) => (
-                                <div key={job._id} className="job-card">
-                                    <div className="job-header">
-                                        <h4>{job.title}</h4>
-                                        {/* Show Match Progress Bar only in Match Mode */}
-                                        {viewMode === "matches" && job.matchScore !== undefined && (
-                                            <div className="match-container">
-                                                <div className="progress-bar">
-                                                    <div className="progress-fill" style={{ width: `${job.matchScore}%` }}></div>
-                                                </div>
-                                                <span className="match-text">{job.matchScore}% Match</span>
-                                            </div>
-                                        )}
-                                    </div>
-                                    
-                                    <p className="job-location">📍 {job.location || "Remote"}</p>
-
-                                    <div className="skills-analysis">
-                                        {viewMode === "matches" && (
-                                            <p style={{ fontSize: '0.8rem', color: '#888', marginBottom: '5px' }}>Skill Analysis:</p>
-                                        )}
-                                        <div className="skill-chips">
-                                            {viewMode === "matches" ? (
-                                                <>
-                                                    {/* Green Checks for Matched Skills */}
-                                                    {job.matchedSkills?.map(skill => (
-                                                        <span key={skill} className="chip match">✔ {skill}</span>
-                                                    ))}
-                                                    {/* Red Crosses for Missing Skills */}
-                                                    {job.missingSkills?.map(skill => (
-                                                        <span key={skill} className="chip missing">✘ {skill}</span>
-                                                    ))}
-                                                </>
-                                            ) : (
-                                                /* Default Gray Chips for Browsing Mode */
-                                                job.requiredSkills?.map(skill => (
-                                                    <span key={skill} className="chip">{skill}</span>
-                                                ))
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
+                                <JobCard key={job._id} job={job} viewMode={viewMode} />
                             ))
                         ) : (
-                            /* EMPTY STATE */
                             <div className="no-results">
                                 <p>No jobs found. Try searching for "MERN" or "Developer".</p>
                             </div>
