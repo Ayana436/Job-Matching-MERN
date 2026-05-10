@@ -70,21 +70,9 @@ router.post('/match', async (req, res) => {
     }
 });
 
+
 // PDF UPLOAD FEATURE
-
-// 1. POST a new job (For the Recruiter Form)
-router.post('/add', async (req, res) => {
-    try {
-        const job = new Job(req.body);
-        await job.save();
-        res.status(201).json({ message: "Job posted successfully!" });
-    } catch (err) {
-        res.status(400).json({ error: "Failed to post job" });
-    }
-});
-
-// 2. NEW: Match via PDF Upload
-// 2. NEW: Match via PDF Upload
+// 1. NEW: Match via PDF Upload
 router.post('/match-pdf', async (req, res) => {
     try {
         if (!req.files || !req.files.resume) {
@@ -130,6 +118,42 @@ router.post('/match-pdf', async (req, res) => {
     } catch (err) {
         console.error("PDF Parsing Error:", err);
         res.status(500).json({ error: "Server failed to process PDF" });
+    }
+});
+
+// 1. POST a new job (For the Recruiter Form)
+router.post('/', async (req, res) => {
+    try {
+        const job = new Job(req.body);
+        await job.save();
+        res.status(201).json({ message: "Job posted successfully!", job: job });
+    } catch (err) {
+        res.status(400).json({ error: "Failed to post job" });
+    }
+});
+
+// 2. DELETE a job by ID
+router.delete('/:id', async (req, res) => {
+    try {
+        const deletedJob = await Job.findByIdAndDelete(req.params.id);
+        if (!deletedJob) return res.status(404).json({ error: "Job not found" });
+        res.json({ message: "Job deleted successfully" });
+    } catch (err) {
+        res.status(500).json({ error: "Server error during deletion" });
+    }
+});
+
+// 3. UPDATE (PUT) an existing job
+router.put('/:id', async (req, res) => {
+    try {
+        const updatedJob = await Job.findByIdAndUpdate(
+            req.params.id, 
+            req.body, 
+            { new: true } // Returns the modified document rather than the original
+        );
+        res.json({ message: "Job updated successfully!", job: updatedJob });
+    } catch (err) {
+        res.status(400).json({ error: "Update failed" });
     }
 });
 

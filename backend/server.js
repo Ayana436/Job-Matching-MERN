@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import jobRoutes from './routes/jobRoutes.js';
 
 // 1. Setup __dirname for ES Modules
 const __filename = fileURLToPath(import.meta.url);
@@ -18,7 +19,6 @@ const app = express();
 // 3. Middlewares
 app.use(cors());
 app.use(express.json()); // Allows parsing of JSON data in request bodies
-import jobRoutes from './routes/jobRoutes.js';
 app.use(fileUpload());
 
 app.use('/api/jobs', jobRoutes);
