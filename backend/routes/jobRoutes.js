@@ -149,7 +149,7 @@ router.put('/:id', async (req, res) => {
         const updatedJob = await Job.findByIdAndUpdate(
             req.params.id, 
             req.body, 
-            { new: true } // Returns the modified document rather than the original
+            { returnDocument: 'after' } // Returns the modified document rather than the original
         );
         res.json({ message: "Job updated successfully!", job: updatedJob });
     } catch (err) {
