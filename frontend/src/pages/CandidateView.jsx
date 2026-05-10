@@ -1,6 +1,103 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 
+// --- SUB-COMPONENT: CIRCULAR MATCH GAUGE (Styles Forced) ---
+const MatchGauge = ({ score }) => {
+    const radius = 20;
+    const circumference = 2 * Math.PI * radius;
+    const offset = circumference - (score / 100) * circumference;
+
+    return (
+        <div className="gauge-wrapper" style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '50px', height: '50px' }}>
+            <svg width="50" height="50">
+                {/* Background Ring */}
+                <circle 
+                    cx="25" cy="25" r={radius} 
+                    style={{ 
+                        fill: 'none', 
+                        stroke: 'rgba(255, 255, 255, 0.1)', 
+                        strokeWidth: '4px' 
+                    }} 
+                />
+                {/* Blue Progress Line */}
+                <circle 
+                    cx="25" cy="25" r={radius} 
+                    style={{ 
+                        fill: 'none', 
+                        stroke: '#646cff', 
+                        strokeWidth: '4px', 
+                        strokeLinecap: 'round',
+                        strokeDasharray: circumference, 
+                        strokeDashoffset: offset,
+                        transition: 'stroke-dashoffset 1.5s ease-in-out',
+                        transform: 'rotate(-90deg)',
+                        transformOrigin: '50% 50%'
+                    }}
+                />
+            </svg>
+            <span style={{ position: 'absolute', fontSize: '0.7rem', fontWeight: 'bold', color: '#fff' }}>
+                {score}%
+            </span>
+        </div>
+    );
+};
+
+// --- SUB-COMPONENT: INDIVIDUAL JOB CARD ---
+const JobCard = ({ job, viewMode }) => {
+    const [isExpanded, setIsExpanded] = useState(false);
+
+    return (
+        <div className="job-card">
+            <div className="job-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <h4>{job.title}</h4>
+                {viewMode === "matches" && job.matchScore !== undefined && (
+                    <MatchGauge score={job.matchScore} />
+                )}
+            </div>
+            
+            <p className="job-location">📍 {job.location || "Remote"}</p>
+
+            <div className="skills-analysis">
+                {viewMode === "matches" && (
+                    <p style={{ fontSize: '0.8rem', color: '#888', marginBottom: '5px' }}>Skill Analysis:</p>
+                )}
+                <div className="skill-chips">
+                    {viewMode === "matches" ? (
+                        <>
+                            {job.matchedSkills?.map(s => <span key={s} className="chip match">✔ {s}</span>)}
+                            {job.missingSkills?.map(s => <span key={s} className="chip missing">✘ {s}</span>)}
+                        </>
+                    ) : (
+                        job.requiredSkills?.map(s => <span key={s} className="chip">{s}</span>)
+                    )}
+                </div>
+            </div>
+
+            <div className={`details-drawer ${isExpanded ? 'open' : ''}`}>
+                <div className="details-content">
+                    <hr style={{ border: '0.5px solid rgba(255,255,255,0.1)', margin: '15px 0' }} />
+                    <h5>Full Job Description</h5>
+                    <p>{job.description || "No description provided."}</p>
+                    
+                    <div className="job-meta">
+                        <span><strong>Type:</strong> {job.jobType || "Full-time"}</span>
+                        <span><strong>Level:</strong> {job.experienceLevel || "Entry Level"}</span>
+                    </div>
+                </div>
+            </div>
+
+            <button 
+                className="btn-text-only" 
+                onClick={() => setIsExpanded(!isExpanded)}
+                style={{ display: 'flex', alignItems: 'center', gap: '5px' }}
+            >
+                {isExpanded ? '🔼 Show Less' : '🔽 View Details'}
+            </button>
+        </div>
+    );
+};
+
+// --- MAIN COMPONENT ---
 const CandidateView = () => {
     const [loading, setLoading] = useState(false);
     const [jobs, setJobs] = useState([]);
@@ -8,82 +105,28 @@ const CandidateView = () => {
     const [matches, setMatches] = useState([]);
     const [viewMode, setViewMode] = useState("all");
 
-    // Separate component for the Job Card to handle individual "Expanded" states
-    const JobCard = ({ job, viewMode }) => {
-        const [isExpanded, setIsExpanded] = useState(false);
-
-        return (
-            <div className="job-card">
-                <div className="job-header">
-                    <h4>{job.title}</h4>
-                    {viewMode === "matches" && job.matchScore !== undefined && (
-                        <div className="match-container">
-                            <div className="progress-bar">
-                                <div className="progress-fill" style={{ width: `${job.matchScore}%` }}></div>
-                            </div>
-                            <span className="match-text">{job.matchScore}% Match</span>
-                        </div>
-                    )}
-                </div>
-                
-                <p className="job-location">📍 {job.location || "Remote"}</p>
-
-                <div className="skills-analysis">
-                    {viewMode === "matches" && (
-                        <p style={{ fontSize: '0.8rem', color: '#888', marginBottom: '5px' }}>Skill Analysis:</p>
-                    )}
-                    <div className="skill-chips">
-                        {viewMode === "matches" ? (
-                            <>
-                                {job.matchedSkills?.map(s => <span key={s} className="chip match">✔ {s}</span>)}
-                                {job.missingSkills?.map(s => <span key={s} className="chip missing">✘ {s}</span>)}
-                            </>
-                        ) : (
-                            job.requiredSkills?.map(s => <span key={s} className="chip">{s}</span>)
-                        )}
-                    </div>
-                </div>
-
-                {/* EXPANDABLE DETAILS SECTION */}
-                <div className={`details-drawer ${isExpanded ? 'open' : ''}`}>
-                    <div className="details-content">
-                        <hr style={{ border: '0.5px solid #333', margin: '15px 0' }} />
-                        <h5>Full Job Description</h5>
-                        <p>{job.description || "No description provided."}</p>
-                        
-                        <div className="job-meta">
-                            <span><strong>Type:</strong> {job.jobType || "Full-time"}</span>
-                            <span><strong>Level:</strong> {job.experienceLevel || "Entry Level"}</span>
-                        </div>
-                    </div>
-                </div>
-
-                <button 
-                    className="btn-text-only" 
-                    onClick={() => setIsExpanded(!isExpanded)}
-                >
-                    {isExpanded ? '🔼 Show Less' : '🔽 View Details'}
-                </button>
-            </div>
-        );
-    };
-
-    useEffect(() => { fetchJobs(); }, []);
+    useEffect(() => { 
+        fetchJobs(); 
+    }, []);
 
     const fetchJobs = async (query = "") => {
         try {
             const res = await axios.get(`/api/jobs/search?q=${query}`);
             setJobs(res.data);
             setViewMode("all");
-        } catch (err) { console.error("Search Failed:", err); }
+        } catch (err) { 
+            console.error("Search Failed:", err); 
+        }
     };
 
     const handlePdfUpload = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
+
         setLoading(true);
         const formData = new FormData();
         formData.append('resume', file);
+
         try {
             const res = await axios.post('/api/jobs/match-pdf', formData);
             setTimeout(() => {
@@ -137,7 +180,7 @@ const CandidateView = () => {
                             ))
                         ) : (
                             <div className="no-results">
-                                <p>No jobs found. Try searching for "MERN" or "Developer".</p>
+                                <p>No jobs found matching your criteria.</p>
                             </div>
                         )}
                     </div>
