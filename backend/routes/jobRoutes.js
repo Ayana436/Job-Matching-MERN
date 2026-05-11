@@ -3,6 +3,7 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import Job from '../models/Job.js';
+import Application from '../models/Application.js';
 import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs';
 import { authorize, protect } from '../middleware/authMiddleware.js';
 
@@ -192,7 +193,7 @@ router.delete('/:id', protect, authorize('recruiter'), async (req, res) => {
         res.status(500).json({ error: "Deletion failed" });
     }
 });
-
+//  ONLY Recruiters can UPDATE
 router.put('/:id', async (req, res) => {
     try {
         const updatedJob = await Job.findByIdAndUpdate(req.params.id, req.body, { returnDocument: 'after' });
@@ -202,6 +203,32 @@ router.put('/:id', async (req, res) => {
     }
 });
 
+
+// Route for Quick Apply
+router.post('/apply', async (req, res) => {
+    try{
+        // Ensure same as frontend:
+    const { jobId, candidateId } = req.body;
+
+    // 1. Check if already applied:
+    const alreadyApplied = await Application.findOne({ jobId, candidateId });
+        if (alreadyApplied) {
+            // use retrun to stop the function & prevent "headers already sent error"
+            return res.status(200).json({ message: "You have already applied for this position.", alreadyApplied: true });
+        }
+
+        // 2. Create the application
+        const newApp = new Application({ jobId, candidateId });
+        await newApp.save();
+
+        res.status(200).json({ message: "Application submitted successfully!" });
+    }catch (err) {
+        console.error("Apply Error:", err);
+        // Ensure only 1 response is sent!
+        if (!res.headersSent){
+        return res.status(500).json({ error: "Server error during application." });
+    }
+}});
 
 
 export default router;
