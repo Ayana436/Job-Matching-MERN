@@ -73,6 +73,20 @@ const JobCard = ({ job, viewMode }) => {
                 </div>
             </div>
 
+            {/* display smart summary */}
+            <div style={{ 
+                marginTop: '15px', 
+                padding: '12px', 
+                background: 'rgba(100, 108, 255, 0.05)', 
+                borderRadius: '10px',
+                borderLeft: '4px solid #646cff',
+                fontSize: '0.9rem',
+                fontStyle: 'italic',
+                color: '#ccc'
+            }}>
+                {job.aiSummary}
+            </div>
+
             <div className={`details-drawer ${isExpanded ? 'open' : ''}`}>
                 <div className="details-content">
                     <hr style={{ border: '0.5px solid rgba(255,255,255,0.1)', margin: '15px 0' }} />

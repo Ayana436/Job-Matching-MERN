@@ -4,14 +4,30 @@ import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs';
 
 const router = express.Router();
 
+// --- HELPER FUNCTIONS ---
+const escapeRegExp = (string) => {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+};
 
-// 1. Global Search (Already working)
+const getMatchSummary = (score, matchedSkills, missingSkills, query) => {
+    if (score === 100) return "✨ Perfect match! Your profile aligns with all required skills.";
+    if (score >= 70) return `🚀 Strong contender! You have ${matchedSkills.length} core skills, including ${matchedSkills.slice(0, 2).join(', ')}.`;
+    if (query) return `🔍 Matches your interest in "${query}". This role requires ${missingSkills.length} more specific skills.`;
+    return "💡 Potential match. Focus on gaining experience in " + missingSkills.slice(0, 2).join(' and ') + ".";
+};
+
+// --- 1. GLOBAL SEARCH ---
 router.get('/search', async (req, res) => {
     try {
         const { q } = req.query;
         let query = {};
-        if (q) {
-            const searchRegex = new RegExp(q, 'i');
+        
+        if (q && q.trim() !== "") {
+            const safeQuery = escapeRegExp(q.trim());
+            // Strict boundaries: \b only works for alpha-numeric. 
+            // We use a more robust check for special chars like C++
+            const searchRegex = new RegExp(`(^|\\s|[\\W_])${safeQuery}($|\\s|[\\W_])`, 'i');
+            
             query = {
                 $or: [
                     { title: searchRegex },
@@ -20,64 +36,41 @@ router.get('/search', async (req, res) => {
                 ]
             };
         }
-        const jobs = await Job.find(query).sort({ createdAt: -1 });
-        console.log(`Search for "${req.query.q}" found ${jobs.length} jobs`);
-        res.status(200).json(jobs);
+
+        const jobs = await Job.find(query).sort({ createdAt: -1 }).lean();
+
+        const processedJobs = jobs.map(job => {
+            const safeQ = q ? escapeRegExp(q.trim()) : "";
+            const matchRegex = new RegExp(`(^|\\s|[\\W_])${safeQ}($|\\s|[\\W_])`, 'i');
+            
+            const matchedSkills = q ? job.requiredSkills.filter(skill => 
+                matchRegex.test(skill)
+            ) : [];
+
+            const missingSkills = job.requiredSkills.filter(s => !matchedSkills.includes(s));
+            const score = (q && job.requiredSkills.length > 0) 
+                ? Math.round((matchedSkills.length / job.requiredSkills.length) * 100) 
+                : 0;
+
+            return {
+                ...job,
+                aiSummary: getMatchSummary(score, matchedSkills, missingSkills, q),
+                matchedSkills,
+                matchScore: score
+            };
+        });
+
+        res.status(200).json(processedJobs);
     } catch (err) {
-        console.log("Search Error:", err);
+        console.error("Search Error:", err);
         res.status(500).json({ error: 'Search failed' });
     }
 });
 
-// 2. SMART MATCHING (The Fix)
-router.post('/match', async (req, res) => {
-    try {
-        const { resumeText } = req.body;
-        if (!resumeText) return res.status(400).json({ error: "No text provided" });
-
-        const allJobs = await Job.find();
-
-        const matches = allJobs.map(job => {
-            const matchedSkills = job.requiredSkills.filter(skill => {
-                // This escapes special characters so 'Node.js' doesn't break the Regex
-                const safeSkill = skill.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                const regex = new RegExp(safeSkill, 'i');
-                return regex.test(resumeText);
-            });
-
-            const score = job.requiredSkills.length > 0 
-                ? (matchedSkills.length / job.requiredSkills.length) * 100 
-                : 0;
-
-            return {
-                _id: job._id,
-                title: job.title,
-                location: job.location,
-                matchScore: Math.round(score),
-                matchedSkills,
-                missingSkills: job.requiredSkills.filter(s => !matchedSkills.includes(s))
-            };
-        });
-
-        // Only return jobs that have at least one skill match (> 0%)
-        const filteredMatches = matches
-            .filter(m => m.matchScore > 0)
-            .sort((a, b) => b.matchScore - a.matchScore);
-
-        res.status(200).json(filteredMatches);
-    } catch (err) {
-        res.status(500).json({ error: 'Matching failed' });
-    }
-});
-
-
-// PDF UPLOAD FEATURE
-// 1. NEW: Match via PDF Upload
+// --- 2. PDF MATCHING ---
 router.post('/match-pdf', async (req, res) => {
     try {
-        if (!req.files || !req.files.resume) {
-            return res.status(400).json({ error: "No file detected" });
-        }
+        if (!req.files || !req.files.resume) return res.status(400).json({ error: "No file detected" });
 
         const dataBuffer = new Uint8Array(req.files.resume.data);
         const loadingTask = pdfjs.getDocument({ data: dataBuffer, verbosity: 0 });
@@ -90,68 +83,59 @@ router.post('/match-pdf', async (req, res) => {
             resumeText += textContent.items.map(item => item.str).join(" ");
         }
 
-        if (!resumeText) throw new Error("Could not extract text from PDF");
-
-        const allJobs = await Job.find();
+        const allJobs = await Job.find().lean();
         const matches = allJobs.map(job => {
             const matchedSkills = job.requiredSkills.filter(skill => {
-                const regex = new RegExp(`\\b${skill}\\b`, 'i');
-        return regex.test(resumeText);
+                const safeSkill = escapeRegExp(skill);
+                const regex = new RegExp(`(^|\\s|[\\W_])${safeSkill}($|\\s|[\\W_])`, 'i'); 
+                return regex.test(resumeText);
             });
 
+            const missingSkills = job.requiredSkills.filter(s => !matchedSkills.includes(s));
             const score = job.requiredSkills.length > 0 
-                ? (matchedSkills.length / job.requiredSkills.length) * 100 
+                ? Math.round((matchedSkills.length / job.requiredSkills.length) * 100) 
                 : 0;
 
             return {
-                _id: job._id,
-                title: job.title,
-                location: job.location,
-                matchScore: Math.round(score),
-                matchedSkills: matchedSkills,
-                missingSkills: job.requiredSkills.filter(s =>!matchedSkills.includes(s))
+                ...job,
+                matchScore: score,
+                matchedSkills,
+                missingSkills,
+                aiSummary: getMatchSummary(score, matchedSkills, missingSkills)
             };
         });
 
         res.status(200).json(matches.filter(m => m.matchScore > 0).sort((a, b) => b.matchScore - a.matchScore));
-
     } catch (err) {
         console.error("PDF Parsing Error:", err);
         res.status(500).json({ error: "Server failed to process PDF" });
     }
 });
 
-// 1. POST a new job (For the Recruiter Form)
+// --- 3. CRUD OPERATIONS ---
 router.post('/', async (req, res) => {
     try {
         const job = new Job(req.body);
         await job.save();
-        res.status(201).json({ message: "Job posted successfully!", job: job });
+        res.status(201).json({ message: "Job posted successfully!", job });
     } catch (err) {
         res.status(400).json({ error: "Failed to post job" });
     }
 });
 
-// 2. DELETE a job by ID
 router.delete('/:id', async (req, res) => {
     try {
-        const deletedJob = await Job.findByIdAndDelete(req.params.id);
-        if (!deletedJob) return res.status(404).json({ error: "Job not found" });
+        await Job.findByIdAndDelete(req.params.id);
         res.json({ message: "Job deleted successfully" });
     } catch (err) {
-        res.status(500).json({ error: "Server error during deletion" });
+        res.status(500).json({ error: "Deletion failed" });
     }
 });
 
-// 3. UPDATE (PUT) an existing job
 router.put('/:id', async (req, res) => {
     try {
-        const updatedJob = await Job.findByIdAndUpdate(
-            req.params.id, 
-            req.body, 
-            { returnDocument: 'after' } // Returns the modified document rather than the original
-        );
-        res.json({ message: "Job updated successfully!", job: updatedJob });
+        const updatedJob = await Job.findByIdAndUpdate(req.params.id, req.body, { returnDocument: 'after' });
+        res.json({ message: "Job updated!", job: updatedJob });
     } catch (err) {
         res.status(400).json({ error: "Update failed" });
     }

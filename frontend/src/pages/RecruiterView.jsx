@@ -49,7 +49,9 @@ const RecruiterView = () => {
         e.preventDefault();
         const payload = {
             ...formData,
-            requiredSkills: formData.requiredSkills.split(',').map(s => s.trim())
+            requiredSkills: typeof formData.requiredSkills === 'string' 
+            ? formData.requiredSkills.split(',').map(s => s.trim()) 
+            : formData.requiredSkills
         };
 
         try {
