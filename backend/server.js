@@ -1,5 +1,5 @@
 import express from 'express';
-import fileUpload from 'express-fileupload';
+// import fileUpload from 'express-fileupload';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
@@ -19,7 +19,7 @@ const app = express();
 // 3. Middlewares
 app.use(cors());
 app.use(express.json()); // Allows parsing of JSON data in request bodies
-app.use(fileUpload());
+// app.use(fileUpload()); NOW USE MULTER!
 
 app.use('/api/jobs', jobRoutes);
 

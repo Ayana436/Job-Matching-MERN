@@ -223,3 +223,66 @@ input:focus {
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+
+/* Ensure cards stack on mobile */
+@media (max-width: 768px) {
+    .job-card {
+        flex-direction: column;
+        align-items: flex-start !important;
+        gap: 15px;
+    }
+
+    /* Prevent the Circular Gauge from squishing */
+    .gauge-container {
+        align-self: center;
+        margin-bottom: 10px;
+    }
+    
+    .results-list {
+        padding: 10px;
+    }
+}
+
+/* Glassmorphism Optimization */
+.job-card {
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    transition: transform 0.3s ease, border-color 0.3s ease;
+}
+
+.job-card:hover {
+    transform: translateY(-5px);
+    border-color: rgba(100, 108, 255, 0.5);
+}
+/* Chips Scrolling */
+@keyframes scroll {
+                    0% { transform: translateX(0); }
+                    100% { transform: translateX(-50%); }
+                }
+                .filter-chip {
+                    padding: 8px 20px;
+                    margin: 0 10px;
+                    border-radius: 50px;
+                    border: 1px solid rgba(255,255,255,0.1);
+                    background: rgba(255,255,255,0.05);
+                    color: #ccc;
+                    cursor: pointer;
+                    transition: 0.3s;
+                }
+                .filter-chip:hover {
+                    background: #646cff;
+                    color: white;
+                    border-color: #646cff;
+                    transform: scale(1.2);
+                }
+                .chip-track:hover {
+                    animation-play-state:paused;
+                }
+                @keyframes scroll {
+                    0% { transform: translateX(0); }
+                    100% { transform: translateX(-50%); }
+                }
+                .scroll-content {
+                    display: inline-block;
+                    animation: scroll 20s linear infinite;
+                }

@@ -1,8 +1,46 @@
 import express from 'express';
+import multer from "multer";
+import path from "path";
+import fs from "fs";
 import Job from '../models/Job.js';
 import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs';
 
 const router = express.Router();
+
+// ---- MULTER - Storage Engine ----
+
+
+// Ensure upload directory exists
+const uploadDir = 'uploads/';
+if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir);
+}
+
+// 1. Storage Configuration
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, uploadDir);
+    },
+    filename: (req, file, cb) => {
+        cb(null, Date.now() + '-' + file.originalname);
+    }
+});
+
+// 2. File Filter (PDF only)
+const fileFilter = (req, file, cb) => {
+    if (file.mimetype === 'application/pdf') {
+        cb(null, true);
+    } else {
+        cb(new Error('Invalid file type. Only PDFs are allowed!'), false);
+    }
+};
+
+const upload = multer({ 
+    storage: storage,
+    fileFilter: fileFilter,
+    limits: { fileSize: 1024 * 1024 * 5 } // 5MB Limit
+});
+
 
 // --- HELPER FUNCTIONS ---
 const escapeRegExp = (string) => {
@@ -32,7 +70,9 @@ router.get('/search', async (req, res) => {
                 $or: [
                     { title: searchRegex },
                     { location: searchRegex },
-                    { requiredSkills: searchRegex }
+                    { requiredSkills: searchRegex },
+                    { jobType: searchRegex }, //finds Full time
+                    { experienceLevel: searchRegex }  // finds Entry
                 ]
             };
         }
@@ -68,11 +108,20 @@ router.get('/search', async (req, res) => {
 });
 
 // --- 2. PDF MATCHING ---
-router.post('/match-pdf', async (req, res) => {
-    try {
-        if (!req.files || !req.files.resume) return res.status(400).json({ error: "No file detected" });
+// Ensure you have these imports at the top of your file
+// import fs from 'fs';
+// import { upload } from './yourMulterConfig'; // or wherever you defined 'upload'
 
-        const dataBuffer = new Uint8Array(req.files.resume.data);
+router.post('/match-pdf', upload.single('resume'), async (req, res) => {
+    try {
+        // 1. Check if Multer caught the file
+        if (!req.file) {
+            return res.status(400).json({ error: "Please upload a valid PDF file" });
+        }
+
+        // 2. Read the file from the disk path Multer created
+        const dataBuffer = new Uint8Array(fs.readFileSync(req.file.path));
+        
         const loadingTask = pdfjs.getDocument({ data: dataBuffer, verbosity: 0 });
         const pdf = await loadingTask.promise;
         
@@ -105,9 +154,18 @@ router.post('/match-pdf', async (req, res) => {
             };
         });
 
-        res.status(200).json(matches.filter(m => m.matchScore > 0).sort((a, b) => b.matchScore - a.matchScore));
+        // 3. (Optional) Delete the file after processing to save space
+        // fs.unlinkSync(req.file.path); 
+
+        const sortedMatches = matches
+            .filter(m => m.matchScore > 0)
+            .sort((a, b) => b.matchScore - a.matchScore);
+
+        res.status(200).json(sortedMatches);
     } catch (err) {
         console.error("PDF Parsing Error:", err);
+        // Clean up file even if parsing fails
+        if (req.file) fs.unlinkSync(req.file.path);
         res.status(500).json({ error: "Server failed to process PDF" });
     }
 });
@@ -140,5 +198,7 @@ router.put('/:id', async (req, res) => {
         res.status(400).json({ error: "Update failed" });
     }
 });
+
+
 
 export default router;
