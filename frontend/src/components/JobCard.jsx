@@ -45,24 +45,39 @@ const JobCard = ({ job }) => {
                 </div>
             </div>
 
-            {/* Skill Analysis Section */}
-            <div style={{ marginTop: '15px' }}>
-                <p style={{ fontSize: '0.85rem', fontWeight: 'bold', marginBottom: '8px' }}>Skill Analysis:</p>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                    {job.matchedSkills?.map((skill, index) => (
-                        <span key={index} style={{
-                            padding: '4px 10px',
-                            background: 'rgba(76, 175, 80, 0.2)',
-                            color: '#81c784',
-                            borderRadius: '20px',
-                            fontSize: '0.8rem',
-                            border: '1px solid rgba(76, 175, 80, 0.3)'
-                        }}>
-                            ✔ {skill}
-                        </span>
-                    ))}
-                </div>
-            </div>
+           {/* // ... inside your JobCard return, update the Skill Analysis section: */}
+<div style={{ marginTop: '15px' }}>
+    <p style={{ fontSize: '0.85rem', fontWeight: 'bold', marginBottom: '8px' }}>Skill Analysis:</p>
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+        {/* Render Matched Skills (Green) */}
+        {job.matchedSkills?.map((skill, index) => (
+            <span key={`match-${index}`} style={{
+                padding: '4px 12px',
+                background: 'rgba(76, 175, 80, 0.15)',
+                color: '#81c784',
+                borderRadius: '20px',
+                fontSize: '0.8rem',
+                border: '1px solid rgba(76, 175, 80, 0.3)'
+            }}>
+                ✔ {skill}
+            </span>
+        ))}
+
+        {/* NEW: Render Missing Skills (Red) */}
+        {job.missingSkills?.map((skill, index) => (
+            <span key={`miss-${index}`} style={{
+                padding: '4px 12px',
+                background: 'rgba(244, 67, 54, 0.15)',
+                color: '#ef5350',
+                borderRadius: '20px',
+                fontSize: '0.8rem',
+                border: '1px solid rgba(244, 67, 54, 0.3)'
+            }}>
+                ✘ {skill}
+            </span>
+        ))}
+    </div>
+</div>
 
             {/* AI Summary Section */}
             {job.aiSummary && (

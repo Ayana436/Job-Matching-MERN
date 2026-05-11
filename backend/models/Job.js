@@ -4,9 +4,15 @@ const jobSchema = new mongoose.Schema({
     title: { type: String, required: true },
     description: { type: String, required: true },
     requiredSkills: [String], 
-    location: { type: String, enum: ['Remote', 'Hybrid', 'Office'], default: "Remote" },
+    // 1. Change location to a simple String to allow cities
+    location: { type: String, required: true }, 
+    // 2. Add workMode to handle the categories
+    workMode: { 
+        type: String, 
+        enum: ['Remote', 'Hybrid', 'Office'], 
+        default: 'Office' 
+    },
     jobType: { type: String, enum: ['Full-time', 'Part-time', 'Contract', 'Internship'], default: 'Full-time' },
-    salaryRange: { type: String },
     experienceLevel: { type: String, enum: ['Entry Level', 'Mid Level', 'Senior Level'], default: 'Entry Level' },
     postedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
 }, { timestamps: true });

@@ -6,6 +6,7 @@ import mongoose from 'mongoose';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import jobRoutes from './routes/jobRoutes.js';
+import authRoutes from './routes/authRoutes.js';
 
 // 1. Setup __dirname for ES Modules
 const __filename = fileURLToPath(import.meta.url);
@@ -20,8 +21,9 @@ const app = express();
 app.use(cors());
 app.use(express.json()); // Allows parsing of JSON data in request bodies
 // app.use(fileUpload()); NOW USE MULTER!
+app.use('/api/auth', authRoutes);  //authenticating admin & user
 
-app.use('/api/jobs', jobRoutes);
+app.use('/api/jobs', jobRoutes);   // displaying Jobs
 
 // 4. Debug Logs (Helpful for University Reports)
 console.log('--- System Diagnostics ---');

@@ -9,8 +9,15 @@ const CandidateView = () => {
     const [loading, setLoading] = useState(false);
     const [isDragging, setIsDragging] = useState(false);
 
-    const quickFilters = ["Full-time", "Remote", "Entry", "Internship", "Senior", "MERN Stack", "Data Science", "Python", "Node.js", "Office"];
+    const quickFilters = ["Full-time", "Remote", "Entry", "Internship", "Senior", "MERN Stack", "Data Science", "Python", "Node.js", "Office", "R"];
 
+    // LOGOUT
+    const handleLogout = () => {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.href = '/auth'; // Send them back to the login page
+    };
+    
     const handleSearch = async (e, queryOverride) => {
         if (e) e.preventDefault();
         const targetQuery = queryOverride || searchQuery;
@@ -47,9 +54,25 @@ const CandidateView = () => {
         }
     };
 
+
     return (
         <div className="candidate-container" style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto', color: '#fff', fontFamily: 'Inter, sans-serif' }}>
-            
+            <nav style={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center',
+                marginBottom:'30px',
+                paddingBottom: '15px',
+                borderBottom: '1px solid rgba(255,255,255,0.1)' 
+            }}>
+                <h2 style={{margin: '0'}}>Qollabb Jobs</h2>
+                <button 
+                    onClick={handleLogout} 
+                    className="btn-secondary" 
+                    style={{ background: '#ff4444', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', transition: '0.3s' }}>
+                    Logout
+                </button>
+            </nav>
             {/* 1. HERO SECTION: Search & Chips */}
             <section style={{ textAlign: 'center', marginBottom: '40px', paddingTop: '40px' }}>
                 <h1 style={{ fontSize: '3rem', fontWeight: '800', marginBottom: '20px', letterSpacing: '-1px' }}>
@@ -58,6 +81,7 @@ const CandidateView = () => {
                 
                 <form onSubmit={handleSearch} style={{ maxWidth: '700px', margin: '0 auto 30px', position: 'relative' }}>
                     <input 
+                        id='job-form'
                         type="text" placeholder="Search by skill, level, or location..." 
                         value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
                         style={{ width: '100%', padding: '20px 30px', borderRadius: '50px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.05)', color: '#fff', fontSize: '1.1rem', outline: 'none', backdropFilter: 'blur(10px)' }}
@@ -65,12 +89,23 @@ const CandidateView = () => {
                     <button type="submit" style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', padding: '12px 25px', borderRadius: '40px', border: 'none', background: '#646cff', color: '#fff', fontWeight: 'bold', cursor: 'pointer' }}>Search</button>
                 </form>
 
-                {/* 2. FLOATING CHIPS (CSS Marquee Style) */}
-                <div className="chip-container" style={{ overflow: 'hidden', whiteSpace: 'nowrap', padding: '10px 0' }}>
-                    <div className="chip-track" style={{ display: 'inline-block', animation: 'scroll 15s linear infinite' }}>
+                {/* 2. FLOATING CHIPS (Infinite Marquee Style) */}
+                <div className="chip-container">
+                    <div className="chip-track">
+                        {/* First set of chips */}
                         {quickFilters.map(filter => (
                             <button 
                                 key={filter} 
+                                onClick={() => {setSearchQuery(filter); handleSearch(null, filter);}}
+                                className="filter-chip"
+                            >
+                                {filter}
+                            </button>
+                        ))}
+                        {/* Duplicate set for seamless looping */}
+                        {quickFilters.map(filter => (
+                            <button 
+                                key={`${filter}-dup`} 
                                 onClick={() => {setSearchQuery(filter); handleSearch(null, filter);}}
                                 className="filter-chip"
                             >

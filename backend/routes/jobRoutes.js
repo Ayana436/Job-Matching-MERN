@@ -4,6 +4,7 @@ import path from "path";
 import fs from "fs";
 import Job from '../models/Job.js';
 import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs';
+import { authorize, protect } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
@@ -171,7 +172,8 @@ router.post('/match-pdf', upload.single('resume'), async (req, res) => {
 });
 
 // --- 3. CRUD OPERATIONS ---
-router.post('/', async (req, res) => {
+// ONLY Recruiters can POST
+router.post('/', protect, authorize('recruiter'), async (req, res) => {
     try {
         const job = new Job(req.body);
         await job.save();
@@ -181,7 +183,8 @@ router.post('/', async (req, res) => {
     }
 });
 
-router.delete('/:id', async (req, res) => {
+// ONLY Recruiters can DELETE
+router.delete('/:id', protect, authorize('recruiter'), async (req, res) => {
     try {
         await Job.findByIdAndDelete(req.params.id);
         res.json({ message: "Job deleted successfully" });
