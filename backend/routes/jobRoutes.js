@@ -230,5 +230,30 @@ router.post('/apply', async (req, res) => {
     }
 }});
 
+// GET all applicants (Recruiter Only)
+
+// Route to update application status (Approve/Reject)
+router.patch('/applicants/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { status } = req.body;
+
+        // Find the application and update its status field
+        const updatedApplication = await Application.findByIdAndUpdate(
+            id,
+            { status: status },
+            { new: true } // Returns the updated document
+        );
+
+        if (!updatedApplication) {
+            return res.status(404).json({ error: "Application not found" });
+        }
+
+        res.status(200).json(updatedApplication);
+    } catch (err) {
+        console.error("Status Update Error:", err);
+        res.status(500).json({ error: "Server failed to update status" });
+    }
+});
 
 export default router;

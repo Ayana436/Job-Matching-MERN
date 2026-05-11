@@ -5,6 +5,7 @@ import RecruiterView from './pages/RecruiterView'; // Use your actual filename h
 import AuthPage from './pages/AuthPage';
 import CandidateView from './pages/CandidateView';
 import './App.css';
+import ApplicantsList from './components/ApplicantsList';
 
 function App() {
   return (
@@ -13,6 +14,7 @@ function App() {
         {/* Public Routes */}
         <Route path="/" element={<CandidateView />} />
         <Route path="/auth" element={<AuthPage />} />
+        <Route path="/admin/applicants" element={<ApplicantsList/>} />
         
         {/* Protected Recruiter Route */}
         <Route 
