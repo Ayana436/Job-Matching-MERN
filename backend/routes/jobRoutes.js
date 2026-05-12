@@ -173,7 +173,7 @@ router.post('/match-pdf', upload.single('resume'), async (req, res) => {
 });
 
 // --- 3. CRUD OPERATIONS ---
-// ONLY Recruiters can POST
+    // ONLY Recruiters can POST
 router.post('/', protect, authorize('recruiter'), async (req, res) => {
     try {
         const job = new Job(req.body);
@@ -184,7 +184,7 @@ router.post('/', protect, authorize('recruiter'), async (req, res) => {
     }
 });
 
-// ONLY Recruiters can DELETE
+    // ONLY Recruiters can DELETE
 router.delete('/:id', protect, authorize('recruiter'), async (req, res) => {
     try {
         await Job.findByIdAndDelete(req.params.id);
@@ -193,7 +193,7 @@ router.delete('/:id', protect, authorize('recruiter'), async (req, res) => {
         res.status(500).json({ error: "Deletion failed" });
     }
 });
-//  ONLY Recruiters can UPDATE
+    //  ONLY Recruiters can UPDATE
 router.put('/:id', async (req, res) => {
     try {
         const updatedJob = await Job.findByIdAndUpdate(req.params.id, req.body, { returnDocument: 'after' });
@@ -204,11 +204,11 @@ router.put('/:id', async (req, res) => {
 });
 
 
-// Route for Quick Apply
+// --- Route for Quick Apply (Candidate)---
 router.post('/apply', async (req, res) => {
     try{
         // Ensure same as frontend:
-    const { jobId, candidateId } = req.body;
+    const { jobId, candidateId, matchScore, candidateSkills } = req.body;
 
     // 1. Check if already applied:
     const alreadyApplied = await Application.findOne({ jobId, candidateId });
@@ -218,7 +218,11 @@ router.post('/apply', async (req, res) => {
         }
 
         // 2. Create the application
-        const newApp = new Application({ jobId, candidateId });
+        const newApp = new Application({ jobId, 
+            candidateId,
+            matchScore,       //saving the AI results
+            candidateSkills  //saving the NLP results
+        });
         await newApp.save();
 
         res.status(200).json({ message: "Application submitted successfully!" });
@@ -229,6 +233,33 @@ router.post('/apply', async (req, res) => {
         return res.status(500).json({ error: "Server error during application." });
     }
 }});
+
+// --- GET applications for a specific candidate ---
+router.get('/my-applications/:candidateId', async (req, res) => {
+    try {
+        const { candidateId } = req.params;
+        const applications = await Application.find({ candidateId })
+            .populate('jobId', 'title location company workMode') 
+            .sort({ createdAt: -1 }); // Show newest first
+            
+        res.status(200).json(applications);
+    } catch (err) {
+        res.status(500).json({ error: "Failed to fetch your applications" });
+    }
+});
+
+// Pulls Score to send Recruiter
+router.get('/applicants', async (req, res) => {
+    try {
+        const apps = await Application.find()
+            .populate('jobId', 'title location')
+            .populate('candidateId', 'name email')
+            .sort({ matchScore: -1 }); // Sort by highest score by default
+        res.status(200).json(apps);
+    } catch (err) {
+        res.status(500).json({ error: "Failed to fetch applicants" });
+    }
+});
 
 // GET all applicants (Recruiter Only)
 

@@ -9,7 +9,6 @@ const AuthPage = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        // Pointing to your backend auth routes
         const endpoint = isLogin ? '/api/auth/login' : '/api/auth/register';
         const payload = isLogin 
             ? { email: formData.email, password: formData.password } 
@@ -18,26 +17,21 @@ const AuthPage = () => {
         try {
             const res = await axios.post(endpoint, payload);
             if (isLogin) {
-                localStorage.setItem('token', res.data.token);
                 const { token, user } = res.data;
+                localStorage.setItem('token', token);
                 const userToSave = {
                     id: user.id || user._id,
                     name: user.name,
                     role: user.role
                 };
-                // Save the "Key" (Token) and User info
                 localStorage.setItem('user', JSON.stringify(userToSave));
-                console.log("Saved to storage:", userToSave);
-                // Redirect based on the role in your database
                 window.location.href = user.role === 'recruiter' ? '/admin' : '/';
             } else {
                 alert("Registration Successful! Please log in.");
                 setIsLogin(true);
             }
         } catch (err) {
-            console.error("Auth Error:", err.response?.data);
-            // alerting the user instead of letting the app crash
-            alert(err.response?.data?.error || "Auth Error: Check if backend is running");
+            alert(err.response?.data?.error || "Auth Error: Check backend connection");
         }
     };
 
@@ -45,15 +39,14 @@ const AuthPage = () => {
         <div className="auth-container">
             <div className="auth-card">
                 <h2>{isLogin ? 'Welcome Back' : 'Create Account'}</h2>
-                <p style={{ color: '#aaa', marginBottom: '25px' }}>
+                <p style={{ color: '#aaa', marginBottom: '25px', fontSize: '0.9rem' }}>
                     {isLogin ? 'Login to manage your applications' : 'Join the Qollabb matching platform'}
                 </p>
 
-                {/* Dynamic Role Toggle */}
                 <div className="role-toggle-container">
                     <div 
                         className="role-slider" 
-                        style={{ left: role === 'candidate' ? '4px' : '50%' }}
+                        style={{ left: role === 'candidate' ? '4px' : 'calc(50% - 2px)' }}
                     ></div>
                     <button 
                         type="button"
@@ -71,52 +64,69 @@ const AuthPage = () => {
                     </button>
                 </div>
 
-                <form onSubmit={handleSubmit}>
+                <form onSubmit={handleSubmit} className="auth-form-wrapper">
                     {!isLogin && (
                         <div className="auth-input-group">
+                            <label className="input-label">Full Name</label>
                             <input 
                                 className="auth-input"
                                 type="text" 
-                                placeholder="Full Name" 
+                                placeholder="Enter your name" 
                                 required 
                                 value={formData.name}
                                 onChange={(e) => setFormData({...formData, name: e.target.value})}
                             />
                         </div>
                     )}
+                    
                     <div className="auth-input-group">
+                        <label className="input-label">Email Address</label>
                         <input 
                             className="auth-input"
                             type="email" 
-                            placeholder="Email Address" 
+                            placeholder="name@company.com" 
                             required 
                             value={formData.email}
                             onChange={(e) => setFormData({...formData, email: e.target.value})}
                         />
                     </div>
-                    <div className="auth-input-group">
+
+                    <div className="auth-input-group" style={{ marginBottom: isLogin ? '5px' : '20px' }}>
+                        <label className="input-label">Password</label>
                         <input 
                             className="auth-input"
                             type="password" 
-                            placeholder="Password" 
+                            placeholder="••••••••" 
                             required 
                             value={formData.password}
                             onChange={(e) => setFormData({...formData, password: e.target.value})}
                         />
                     </div>
+
+                    {isLogin && (
+                        <div className="forgot-password-container">
+                            <button 
+                                type="button" 
+                                className="forgot-link"
+                                onClick={() => alert("Reset link sent to " + formData.email)}
+                            >
+                                Forgot Password?
+                            </button>
+                        </div>
+                    )}
+
                     <button className="auth-submit-btn" type="submit">
                         {isLogin ? 'Sign In' : 'Create Account'}
                     </button>
                 </form>
 
-                <p style={{ marginTop: '20px', fontSize: '0.9rem', color: '#888' }}>
+                <p className="auth-footer-text">
                     {isLogin ? "New here?" : "Already have an account?"}
                     <span 
-                        className="auth-link"
-                        style={{ color: '#646cff', cursor: 'pointer', marginLeft: '8px', fontWeight: '600' }}
+                        className="auth-link-toggle"
                         onClick={() => setIsLogin(!isLogin)}
                     >
-                        {isLogin ? 'Create one now' : 'Log in here'}
+                        {isLogin ? ' Create one now' : ' Log in here'}
                     </span>
                 </p>
             </div>

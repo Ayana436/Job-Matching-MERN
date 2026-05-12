@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
+
 const RecruiterView = () => {
+    const navigate = useNavigate();
     const [formData, setFormData] = useState({
         title: '', location: '', workMode: 'Office', description: '', 
         requiredSkills: '', jobType: 'Full-time', experienceLevel: 'Entry Level'
@@ -27,12 +30,19 @@ const RecruiterView = () => {
         window.location.href = '/auth';
     };
 
+    const resetForm = () => {
+        setFormData({ title: '', location: '', workMode: 'Office', description: '', requiredSkills: '', jobType: 'Full-time', experienceLevel: 'Entry Level' });
+        setEditingId(null);
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         const user = JSON.parse(localStorage.getItem('user'));
         const recruiterId = user?.id || user?._id;
-        const payload = { ...formData, postedBy: recruiterId, 
-            requiredSkills: formData.requiredSkills.split(',').map(s => s.trim()) 
+        const payload = { 
+            ...formData, 
+            postedBy: recruiterId, 
+            requiredSkills: typeof formData.requiredSkills === 'string' ? formData.requiredSkills.split(',').map(s => s.trim()) : formData.requiredSkills
         };
 
         try {
@@ -42,10 +52,9 @@ const RecruiterView = () => {
             } else {
                 await axios.post('/api/jobs', payload, config);
             }
-            setFormData({ title: '', location: '', workMode: 'Office', description: '', requiredSkills: '', jobType: 'Full-time', experienceLevel: 'Entry Level' });
-            setEditingId(null);
+            resetForm();
             fetchAdminJobs();
-        } catch (err) { alert("Action failed. Check console."); }
+        } catch (err) { alert("Action failed."); }
     };
 
     const handleDelete = async (id) => {
@@ -57,49 +66,66 @@ const RecruiterView = () => {
     };
 
     return (
-        <div style={{ padding: '40px', maxWidth: '1100px', margin: '0 auto', color: 'white', fontFamily: 'sans-serif' }}>
-            {/* Header with Styled Logout */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '30px' }}>
-                <h1 style={{ fontSize: '1.5rem', opacity: 0.7 }}>Recruiter Dashboard</h1>
-                <button onClick={handleLogout} style={{ background: '#ff4444', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', transition: '0.3s' }}>
-                    Logout
-                </button>
-            </div>
+        <div className="recruiter-container">
+            {/* Header / Nav */}
+            <header className="recruiter-header">
+                <h1 className="header-title">Recruiter <span>Dashboard</span></h1>
+                
+                <nav className="header-nav">
+                    <button className="btn-applicants" onClick={() => navigate('/admin/applicants')}>
+                        📂 View Applicants
+                    </button>
+                    <button className="btn-logout" onClick={handleLogout}>Logout</button>
+                </nav>
+            </header>
 
-            <div style={{ background: '#1e1e26', padding: '40px', borderRadius: '20px', boxShadow: '0 10px 30px rgba(0,0,0,0.3)' }}>
-                <h2 style={{ marginBottom: '30px' }}>{editingId ? "📝 Edit Job" : "🚀 Post a New Role"}</h2>
-                <form onSubmit={handleSubmit} style={{ display: 'grid', gap: '20px' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+            {/* JOB FORM */}
+            <div className="job-form-card">
+                <h2>{editingId ? "📝 Edit Job" : "🚀 Post a New Role"}</h2>
+                <form onSubmit={handleSubmit}>
+                    <div className="form-grid-2">
                         <div className="input-group">
-                            <label style={{ display: 'block', marginBottom: '8px', opacity: 0.8 }}>Job Title</label>
-                            <input required style={inputStyle} value={formData.title} onChange={(e) => setFormData({...formData, title: e.target.value})} />
+                            <label>Job Title</label>
+                            <input className="input-field" required value={formData.title} onChange={(e) => setFormData({...formData, title: e.target.value})} />
                         </div>
                         <div className="input-group">
-                            <label style={{ display: 'block', marginBottom: '8px', opacity: 0.8 }}>Location (City)</label>
-                            <input required style={inputStyle} value={formData.location} onChange={(e) => setFormData({...formData, location: e.target.value})} />
+                            <label>Location (City)</label>
+                            <input className="input-field" required value={formData.location} onChange={(e) => setFormData({...formData, location: e.target.value})} />
                         </div>
                     </div>
+                    <div className="input-group" style={{ marginTop: '20px' }}>
+                        <label style={{ display: 'block', marginBottom: '8px', opacity: 0.8 }}>
+                            Required Skills (Comma separated: e.g. React, Node, Python)
+                        </label>
+                        <input 
+                            className="input-field"
+                            required 
+                            placeholder="React, Node, MongoDB..."
+                            value={formData.requiredSkills} 
+                            onChange={(e) => setFormData({...formData, requiredSkills: e.target.value})} 
+                        />
+                    </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px' }}>
+                    <div className="form-grid-3">
                         <div className="input-group">
-                            <label style={{ display: 'block', marginBottom: '8px', opacity: 0.8 }}>Work Mode</label>
-                            <select style={inputStyle} value={formData.workMode} onChange={(e) => setFormData({...formData, workMode: e.target.value})}>
+                            <label>Work Mode</label>
+                            <select className="input-field" value={formData.workMode} onChange={(e) => setFormData({...formData, workMode: e.target.value})}>
                                 <option value="Office">Office</option>
                                 <option value="Remote">Remote</option>
                                 <option value="Hybrid">Hybrid</option>
                             </select>
                         </div>
                         <div className="input-group">
-                            <label style={{ display: 'block', marginBottom: '8px', opacity: 0.8 }}>Job Type</label>
-                            <select style={inputStyle} value={formData.jobType} onChange={(e) => setFormData({...formData, jobType: e.target.value})}>
+                            <label>Job Type</label>
+                            <select className="input-field" value={formData.jobType} onChange={(e) => setFormData({...formData, jobType: e.target.value})}>
                                 <option value="Full-time">Full-time</option>
                                 <option value="Part-time">Part-time</option>
                                 <option value="Internship">Internship</option>
                             </select>
                         </div>
                         <div className="input-group">
-                            <label style={{ display: 'block', marginBottom: '8px', opacity: 0.8 }}>Experience</label>
-                            <select style={inputStyle} value={formData.experienceLevel} onChange={(e) => setFormData({...formData, experienceLevel: e.target.value})}>
+                            <label>Experience</label>
+                            <select className="input-field" value={formData.experienceLevel} onChange={(e) => setFormData({...formData, experienceLevel: e.target.value})}>
                                 <option value="Entry Level">Entry Level</option>
                                 <option value="Mid Level">Mid Level</option>
                                 <option value="Senior Level">Senior Level</option>
@@ -108,30 +134,40 @@ const RecruiterView = () => {
                     </div>
 
                     <div className="input-group">
-                        <label style={{ display: 'block', marginBottom: '8px', opacity: 0.8 }}>Description</label>
-                        <textarea required rows="4" style={inputStyle} value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} />
+                        <label>Description</label>
+                        <textarea className="input-field" required rows="4" value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} />
                     </div>
 
-                    <button type="submit" style={{ background: '#6366f1', color: 'white', border: 'none', padding: '15px', borderRadius: '12px', fontSize: '1rem', fontWeight: 'bold', cursor: 'pointer', marginTop: '10px' }}>
-                        {editingId ? "Save Changes" : "Publish Job"}
-                    </button>
+                    <div style={{ display: 'flex', gap: '15px', marginTop: '20px' }}>
+                        <button type="submit" className="btn-primary">
+                            {editingId ? "Save Changes" : "Publish Job"}
+                        </button>
+                        {editingId && (
+                            <button type="button" className="btn-cancel" onClick={resetForm}>
+                                Cancel
+                            </button>
+                        )}
+                    </div>
                 </form>
             </div>
 
             {/* Active Listings Section */}
-            <div style={{ marginTop: '50px' }}>
-                <h3 style={{ marginBottom: '20px' }}>💼 Active Listings ({jobs.length})</h3>
+            <div className="listings-section">
+                <h3>💼 Active Listings ({jobs.length})</h3>
                 {jobs.map(job => (
-                    <div key={job._id} style={{ background: '#252530', padding: '20px', borderRadius: '15px', marginBottom: '15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div key={job._id} className="job-item">
                         <div>
-                            <h4 style={{ margin: 0 }}>{job.title}</h4>
+                            <h4>{job.title}</h4>
                             <p style={{ margin: '5px 0 0 0', fontSize: '0.85rem', color: '#aaa' }}>
-                                📍 {job.location} ({job.workMode || 'Office'}) • {job.jobType}
+                                📍 {job.location} {(job.workMode)} • {job.jobType}
                             </p>
                         </div>
                         <div style={{ display: 'flex', gap: '10px' }}>
-                            <button onClick={() => {setEditingId(job._id); setFormData({...job, requiredSkills: job.requiredSkills.join(', ')});}} style={actionBtnStyle('#4caf50')}>Edit</button>
-                            <button onClick={() => handleDelete(job._id)} style={actionBtnStyle('#f44336')}>Delete</button>
+                            <button className="edit-btn" onClick={() => {
+                                setEditingId(job._id); 
+                                setFormData({...job, requiredSkills: Array.isArray(job.requiredSkills) ? job.requiredSkills.join(', ') : job.requiredSkills});
+                            }}>Edit</button>
+                            <button className="delete-btn" onClick={() => handleDelete(job._id)}>Delete</button>
                         </div>
                     </div>
                 ))}
@@ -139,16 +175,5 @@ const RecruiterView = () => {
         </div>
     );
 };
-
-// Internal CSS Styles
-const inputStyle = {
-    width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.1)', 
-    background: 'rgba(255,255,255,0.05)', color: 'white', outline: 'none', boxSizing: 'border-box'
-};
-
-const actionBtnStyle = (color) => ({
-    background: `${color}1A`, color: color, border: `1px solid ${color}`, 
-    padding: '8px 15px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold'
-});
 
 export default RecruiterView;
