@@ -128,25 +128,13 @@ const JobCard = ({ job, onApply }) => {
                 alignItems: 'center' 
             }}>
                 <button 
-                    onClick={handleApplyClick}
-                    disabled={applied}
-                    style={{
-                        flex: 2,
-                        padding: '12px',
-                        background: applied ? 'rgba(76, 175, 80, 0.2)' : 'linear-gradient(135deg, #646cff 0%, #4f46e5 100%)',
-                        color: applied ? '#81c784' : 'white',
-                        border: applied ? '1px solid #4caf50' : 'none',
-                        padding: '12px',
-                        borderRadius: '12px',
-                        fontWeight: 'bold',
-                        fontSize: '0.95rem',
-                        cursor: applied ? 'default' : 'pointer',
-                        transition: '0.3s',
-                        boxShadow: applied ? 'none' : '0 4px 15px rgba(100, 108, 255, 0.3)'
-                    }}
-                >
-                    {applied ? 'Applied ✓' : 'Quick Apply 🚀'}
-                </button>
+    // Check this line for the 'joapplied' typo!
+    className={job.applied ? "applied-btn" : "quick-apply-btn"}
+    disabled={job.applied}
+    onClick={() => !job.applied && onApply(job._id, job.matchScore)}
+>
+    {job.applied ? "Applied ✓" : "Quick Apply 🚀"}
+</button>
 
                 <button 
                     onClick={() => setIsExpanded(!isExpanded)}
