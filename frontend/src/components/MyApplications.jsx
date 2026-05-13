@@ -1,17 +1,19 @@
-import React, { useEffect, useState } from 'react';
-import axios from 'axios';
-import { useNavigate} from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import API from '../api';
+import { useNavigate } from 'react-router-dom';
 
 const MyApplications = () => {
     const navigate = useNavigate();
     const [apps, setApps] = useState([]);
     const [loading, setLoading] = useState(true);
     const user = JSON.parse(localStorage.getItem('user'));
+    const userId = user?.id || user?._id;
 
     useEffect(() => {
         const fetchMyApps = async () => {
             try {
-                const res = await axios.get(`/api/jobs/my-applications/${user.id || user._id}`);
+                if (!userId) return;
+                const res = await API.get(`/api/jobs/my-applications/${userId}`);
                 setApps(res.data);
             } catch (err) {
                 console.error("Fetch failed", err);
@@ -20,7 +22,7 @@ const MyApplications = () => {
             }
         };
         fetchMyApps();
-    }, []);
+    }, [userId]);
 
     const getStatusStyle = (status) => {
         switch(status) {

@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import API from '../api';
 
 
 const RecruiterView = () => {
@@ -13,16 +13,16 @@ const RecruiterView = () => {
     const [editingId, setEditingId] = useState(null);
     const token = localStorage.getItem('token');
 
-    useEffect(() => { if (token) fetchAdminJobs(); }, [token]);
-
-    const fetchAdminJobs = async () => {
+    const fetchAdminJobs = useCallback(async () => {
         try {
-            const res = await axios.get('/api/jobs/search?q=', {
+            const res = await API.get('/api/jobs/search?q=', {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setJobs(res.data);
         } catch (err) { console.error("Fetch Error:", err); }
-    };
+    }, [token]);
+
+    useEffect(() => { if (token) fetchAdminJobs(); }, [fetchAdminJobs, token]);
 
     const handleLogout = () => {
         localStorage.removeItem('token');
@@ -48,21 +48,27 @@ const RecruiterView = () => {
         try {
             const config = { headers: { Authorization: `Bearer ${token}` } };
             if (editingId) {
-                await axios.put(`/api/jobs/${editingId}`, payload, config);
+                await API.put(`/api/jobs/${editingId}`, payload, config);
             } else {
-                await axios.post('/api/jobs', payload, config);
+                await API.post('/api/jobs', payload, config);
             }
             resetForm();
             fetchAdminJobs();
-        } catch (err) { alert("Action failed."); }
+        } catch (err) {
+            console.error("Save job failed:", err);
+            alert("Action failed.");
+        }
     };
 
     const handleDelete = async (id) => {
         if (!window.confirm("Delete this listing?")) return;
         try {
-            await axios.delete(`/api/jobs/${id}`, { headers: { Authorization: `Bearer ${token}` } });
+            await API.delete(`/api/jobs/${id}`, { headers: { Authorization: `Bearer ${token}` } });
             fetchAdminJobs();
-        } catch (err) { alert("Delete failed."); }
+        } catch (err) {
+            console.error("Delete job failed:", err);
+            alert("Delete failed.");
+        }
     };
 
     return (

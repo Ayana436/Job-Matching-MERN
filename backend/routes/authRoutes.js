@@ -47,4 +47,16 @@ router.post('/login', async (req, res) => {
     }
 });
 
+// backend/routes/authRoutes.js
+
+router.put('/update/:id', async (req, res) => {
+    try {
+        const { name } = req.body;
+        const user = await User.findByIdAndUpdate(req.params.id, { name }, { new: true });
+        res.json(user);
+    } catch (err) {
+        res.status(500).json({ error: "Update failed" });
+    }
+});
+
 export default router;

@@ -1,14 +1,50 @@
-import React, { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import API from '../api';
 
 const ApplicantsList = () => {
     const [applicants, setApplicants] = useState([]);
+    const [searchTerm, setSearchTerm] = useState("");
     const navigate = useNavigate();
 
-    useEffect(() => {
-        axios.get('/api/jobs/applicants').then(res => setApplicants(res.data));
+    const fetchApplicants = useCallback(async () => {
+        const res = await API.get('/api/jobs/applicants');
+        setApplicants(res.data);
     }, []);
+
+    useEffect(() => {
+        fetchApplicants().catch((err) => {
+            console.error("Fetch applicants failed:", err);
+        });
+    }, [fetchApplicants]);
+
+const handleStatusUpdate = async (applicationId, newStatus) => {
+    try {
+        await API.patch(`/api/jobs/applicants/${applicationId}`, {
+            status: newStatus 
+        });
+        
+        // ✨ MANUAL UI UPDATE:
+        // Assuming your state variable for the list is called 'applicants'
+        // This find the specific row and flips the status without a page reload.
+        setApplicants(prev => prev.map(app => 
+            app._id === applicationId ? { ...app, status: newStatus } : app
+        ));
+
+        alert(`Application ${newStatus}!`);
+
+        await fetchApplicants();
+    } catch (err) {
+        console.error("Status update failed:", err);
+        alert("Failed to update UI. Please refresh.")
+    }
+};
+
+const filteredApplicants = applicants.filter((app) =>
+    app.candidateId?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    app.candidateSkills?.some(skill => skill.toLowerCase().includes(searchTerm.toLowerCase()))
+);
+
 
     return (
         <div className="applicants-wrapper">
@@ -19,7 +55,25 @@ const ApplicantsList = () => {
                 </button>
             </div>
 
-            <table className='incoming' style={{ width: '100%', color: 'white', borderCollapse: 'collapse' }}>
+        
+            <div style={{display:'flex', justifyContent:'space-between'}}>
+                <div className="search-container" style={{ marginBottom: '20px', width:'60%' }}>
+            <input
+                type="text"
+                placeholder="🔍 Search by candidate name..."
+                className="auth-input" // Reusing your existing input style
+                // style={{ maxWidth: '400px' }}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+            />
+        </div>
+        <div className="results-count">
+        Showing {filteredApplicants.length} applications
+    </div>
+
+            </div>
+
+            <table className='incoming applicants-table' style={{ width: '100%', color: 'white', borderCollapse: 'collapse' }}>
                 <thead>
                     <tr style={{ background: 'rgba(255,255,255,0.05)', textAlign: 'left' }}>
                         <th style={{ padding: '15px' }}>Candidate</th>
@@ -30,9 +84,10 @@ const ApplicantsList = () => {
                     </tr>
                 </thead>
                 <tbody>
-                    {applicants.map(app => (
+                    {filteredApplicants.map(app => (
                         <tr key={app._id} style={{ borderBottom: '1px solid #1e293b' }}>
-                            <td style={{ padding: '15px' }}><div style={{ fontWeight: 'bold' }}>{app.candidateId?.name}</div>
+                            <td style={{ padding: '15px' }}><div style={{ fontWeight: 'bold' }}>
+                                {app.candidateId?.name}</div>
                                 <div style={{ fontSize: '0.75rem', color: '#646cff', marginTop: '4px' }}>
                                     {app.candidateSkills && app.candidateSkills.length > 0 
                                         ? app.candidateSkills.join(', ') 

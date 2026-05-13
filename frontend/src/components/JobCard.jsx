@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 
 const JobCard = ({ job, onApply }) => {
     const [isExpanded, setIsExpanded] = useState(false);
-    const [applied, setApplied] = useState(false); // Local state to show immediate feedback
+    const [applied, setApplied] = useState(job.applied || false);
 
     // Color logic for the match score gauge
     const getScoreColor = (score) => {
@@ -10,13 +10,6 @@ const JobCard = ({ job, onApply }) => {
         if (score >= 50) return '#ff9800'; // Orange
         return '#f44336'; // Red
     };
-
-    const handleApplyClick = async () => {
-    const isSuccess = await onApply(); // This calls the function in CandidateView
-    if (isSuccess) {
-        setApplied(true); // Now it will turn green/Applied
-    }
-};
 
     return (
         <div className="job-card" style={{
@@ -127,13 +120,17 @@ const JobCard = ({ job, onApply }) => {
                 gap: '12px', 
                 alignItems: 'center' 
             }}>
-                <button 
-    // Check this line for the 'joapplied' typo!
-    className={job.applied ? "applied-btn" : "quick-apply-btn"}
-    disabled={job.applied}
-    onClick={() => !job.applied && onApply(job._id, job.matchScore)}
+                <button
+    className={applied ? 'applied-btn' : 'quick-apply-btn'}
+    disabled={applied}
+    onClick={async () => {
+        const success = await onApply(job._id, job.matchScore);
+        if (success) {
+            setApplied(true);
+        }
+    }}
 >
-    {job.applied ? "Applied ✓" : "Quick Apply 🚀"}
+    {applied ? 'Applied ✓' : 'Quick Apply 🚀'}
 </button>
 
                 <button 

@@ -56,25 +56,44 @@ const getMatchSummary = (score, matchedSkills, missingSkills, query) => {
     return "💡 Potential match. Focus on gaining experience in " + missingSkills.slice(0, 2).join(' and ') + ".";
 };
 
+// --- NEW: GET ALL JOBS (Base Route) ---
+router.get('/', async (req, res) => {
+    try {
+        const jobs = await Job.find().sort({ createdAt: -1 }).lean();
+        // We map them so the frontend always sees a 'matchScore' even if 0
+        const processedJobs = jobs.map(job => ({
+            ...job,
+            matchScore: 0,
+            aiSummary: "Upload a resume to see AI matching details."
+        }));
+        res.status(200).json(processedJobs);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch jobs' });
+    }
+});
+
 // --- 1. GLOBAL SEARCH ---
 router.get('/search', async (req, res) => {
     try {
         const { q } = req.query;
         let query = {};
+        const searchTerms = q
+            ? q.split(',').map(term => term.trim()).filter(Boolean)
+            : [];
         
-        if (q && q.trim() !== "") {
-            const safeQuery = escapeRegExp(q.trim());
-            // Strict boundaries: \b only works for alpha-numeric. 
-            // We use a more robust check for special chars like C++
-            const searchRegex = new RegExp(`(^|\\s|[\\W_])${safeQuery}($|\\s|[\\W_])`, 'i');
+        if (searchTerms.length > 0) {
+            const searchRegexes = searchTerms.map((term) => {
+                const safeQuery = escapeRegExp(term);
+                return new RegExp(`(^|\\s|[\\W_])${safeQuery}($|\\s|[\\W_])`, 'i');
+            });
             
             query = {
                 $or: [
-                    { title: searchRegex },
-                    { location: searchRegex },
-                    { requiredSkills: searchRegex },
-                    { jobType: searchRegex }, //finds Full time
-                    { experienceLevel: searchRegex }  // finds Entry
+                    { title: { $in: searchRegexes } },
+                    { location: { $in: searchRegexes } },
+                    { requiredSkills: { $in: searchRegexes } },
+                    { jobType: { $in: searchRegexes } },
+                    { experienceLevel: { $in: searchRegexes } }
                 ]
             };
         }
@@ -82,15 +101,17 @@ router.get('/search', async (req, res) => {
         const jobs = await Job.find(query).sort({ createdAt: -1 }).lean();
 
         const processedJobs = jobs.map(job => {
-            const safeQ = q ? escapeRegExp(q.trim()) : "";
-            const matchRegex = new RegExp(`(^|\\s|[\\W_])${safeQ}($|\\s|[\\W_])`, 'i');
+            const matchRegexes = searchTerms.map((term) => {
+                const safeQuery = escapeRegExp(term);
+                return new RegExp(`(^|\\s|[\\W_])${safeQuery}($|\\s|[\\W_])`, 'i');
+            });
             
-            const matchedSkills = q ? job.requiredSkills.filter(skill => 
-                matchRegex.test(skill)
+            const matchedSkills = searchTerms.length > 0 ? job.requiredSkills.filter(skill =>
+                matchRegexes.some((regex) => regex.test(skill))
             ) : [];
 
             const missingSkills = job.requiredSkills.filter(s => !matchedSkills.includes(s));
-            const score = (q && job.requiredSkills.length > 0) 
+            const score = (searchTerms.length > 0 && job.requiredSkills.length > 0)
                 ? Math.round((matchedSkills.length / job.requiredSkills.length) * 100) 
                 : 0;
 

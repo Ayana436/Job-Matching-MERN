@@ -1,6 +1,6 @@
 // handles both login & signup in one card
-import React, { useState } from 'react';
-import axios from 'axios';
+import { useState } from 'react';
+import API from '../api';
 
 const AuthPage = () => {
     const [isLogin, setIsLogin] = useState(true);
@@ -15,7 +15,7 @@ const AuthPage = () => {
             : { ...formData, role };
 
         try {
-            const res = await axios.post(endpoint, payload);
+            const res = await API.post(endpoint, payload);
             if (isLogin) {
                 const { token, user } = res.data;
                 localStorage.setItem('token', token);
