@@ -25,7 +25,10 @@ const AuthPage = () => {
                     role: user.role
                 };
                 localStorage.setItem('user', JSON.stringify(userToSave));
-                window.location.href = user.role === 'recruiter' ? '/admin' : '/';
+                window.location.href =
+    user.role === "recruiter"
+        ? "/admin"
+        : "/candidate";
             } else {
                 alert("Registration Successful! Please log in.");
                 setIsLogin(true);

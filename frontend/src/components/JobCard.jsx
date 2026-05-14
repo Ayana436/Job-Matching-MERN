@@ -1,184 +1,96 @@
-import { useState } from 'react';
+import { useEffect, useState } from "react";
 
-const JobCard = ({ job, onApply }) => {
+const JobCard = ({ job, onApply, isSaved = false, onToggleSave }) => {
     const [isExpanded, setIsExpanded] = useState(false);
     const [applied, setApplied] = useState(job.applied || false);
 
-    // Color logic for the match score gauge
-    const getScoreColor = (score) => {
-        if (score >= 80) return '#4caf50'; // Green
-        if (score >= 50) return '#ff9800'; // Orange
-        return '#f44336'; // Red
+    useEffect(() => {
+        setApplied(job.applied || false);
+    }, [job.applied]);
+
+    const getScoreColor = (score = 0) => {
+        if (score >= 80) return "#4caf50";
+        if (score >= 50) return "#ff9800";
+        return "#f44336";
     };
 
+    const matchScore = job.matchScore ?? 0;
+
     return (
-        <div className="job-card" style={{
-            background: 'rgba(255, 255, 255, 0.05)',
-            backdropFilter: 'blur(12px)',
-            borderRadius: '24px',
-            padding: '25px',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-            marginBottom: '20px',
-            transition: 'all 0.3s ease',
-            color: '#fff',
-            position: 'relative',
-            overflow: 'hidden'
-        }}>
-            {/* Header Section */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '5px' }}>
-                        <h3 style={{ margin: 0, fontSize: '1.4rem' }}>{job.title}</h3>
-                        {/* Work Mode Badge */}
-                        <span style={{ 
-                            fontSize: '0.7rem', 
-                            padding: '3px 8px', 
-                            background: 'rgba(100, 108, 255, 0.2)', 
-                            color: '#818cf8', 
-                            borderRadius: '6px', 
-                            fontWeight: 'bold',
-                            textTransform: 'uppercase'
-                        }}>
-                            {job.workMode || 'Office'}
-                        </span>
+        <div className="job-card">
+            <div className="job-card-top">
+                <div>
+                    <div className="job-title-row">
+                        <h3>{job.title}</h3>
+                        <span className="job-mode-badge">{job.workMode || "Office"}</span>
                     </div>
-                    <p style={{ margin: 0, color: '#aaa', fontSize: '0.9rem' }}>📍 {job.location}</p>
+                    <p className="muted-text">Location: {job.location}</p>
+                    <p className="salary-text">Salary: {job.salary || "Negotiable"}</p>
                 </div>
-                
-                {/* Match Score Gauge */}
-                <div style={{ textAlign: 'center', marginLeft: '20px' }}>
-                    <div style={{
-                        width: '55px',
-                        height: '55px',
-                        borderRadius: '50%',
-                        border: `4px solid ${getScoreColor(job.matchScore)}`,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontWeight: '800',
-                        fontSize: '0.9rem',
-                        background: 'rgba(0,0,0,0.2)'
-                    }}>
-                        {job.matchScore}%
+
+                <div className="match-stack">
+                    {onToggleSave && (
+                        <button
+                            type="button"
+                            className={isSaved ? "save-job-btn saved" : "save-job-btn"}
+                            onClick={() => onToggleSave(job._id)}
+                            title={isSaved ? "Remove saved job" : "Save job"}
+                        >
+                            {isSaved ? "Saved" : "Save"}
+                        </button>
+                    )}
+                    <div className="match-circle" style={{ borderColor: getScoreColor(matchScore) }}>
+                        {matchScore}%
                     </div>
-                    <span style={{ fontSize: '0.65rem', color: '#888', fontWeight: 'bold', textTransform: 'uppercase', marginTop: '4px', display: 'block' }}>Match</span>
+                    <span className="match-label">Match</span>
+                    {job.confidence && <span className="confidence-pill">{job.confidence}% confidence</span>}
                 </div>
             </div>
 
-            {/* Skill Analysis Section */}
-            <div style={{ marginTop: '20px' }}>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                    {job.matchedSkills?.map((skill, index) => (
-                        <span key={`match-${index}`} style={{
-                            padding: '5px 12px',
-                            background: 'rgba(76, 175, 80, 0.12)',
-                            color: '#81c784',
-                            borderRadius: '20px',
-                            fontSize: '0.75rem',
-                            border: '1px solid rgba(76, 175, 80, 0.2)',
-                            fontWeight: '500'
-                        }}>
-                            ✔ {skill}
-                        </span>
+            {(job.matchedSkills?.length > 0 || job.missingSkills?.length > 0) && (
+                <div className="skill-chips">
+                    {job.matchedSkills?.map((skill) => (
+                        <span key={`match-${skill}`} className="chip match">Match: {skill}</span>
                     ))}
-                    {job.missingSkills?.map((skill, index) => (
-                        <span key={`miss-${index}`} style={{
-                            padding: '5px 12px',
-                            background: 'rgba(244, 67, 54, 0.12)',
-                            color: '#ef5350',
-                            borderRadius: '20px',
-                            fontSize: '0.75rem',
-                            border: '1px solid rgba(244, 67, 54, 0.2)',
-                            fontWeight: '500'
-                        }}>
-                            ✘ {skill}
-                        </span>
+                    {job.missingSkills?.map((skill) => (
+                        <span key={`missing-${skill}`} className="chip missing">Missing: {skill}</span>
                     ))}
-                </div>
-            </div>
-
-            {/* AI Summary Section */}
-            {job.aiSummary && (
-                <div style={{ 
-                    marginTop: '18px', 
-                    padding: '14px', 
-                    background: 'rgba(100, 108, 255, 0.08)', 
-                    borderRadius: '14px',
-                    borderLeft: '4px solid #646cff',
-                    fontSize: '0.88rem',
-                    lineHeight: '1.4',
-                    color: '#ddd'
-                }}>
-                    <strong style={{ color: '#818cf8' }}>AI Insights:</strong> {job.aiSummary}
                 </div>
             )}
 
-            {/* Action Buttons Row */}
-            <div style={{ 
-                marginTop: '20px', 
-                display: 'flex', 
-                gap: '12px', 
-                alignItems: 'center' 
-            }}>
-                <button
-    className={applied ? 'applied-btn' : 'quick-apply-btn'}
-    disabled={applied}
-    onClick={async () => {
-        const success = await onApply(job._id, job.matchScore);
-        if (success) {
-            setApplied(true);
-        }
-    }}
->
-    {applied ? 'Applied ✓' : 'Quick Apply 🚀'}
-</button>
+            {job.aiSummary && (
+                <div className="ai-summary">
+                    <strong>AI Insights:</strong> {job.aiSummary}
+                </div>
+            )}
 
-                <button 
-                    onClick={() => setIsExpanded(!isExpanded)}
-                    style={{
-                        flex: 1,
-                        background: 'rgba(255,255,255,0.05)',
-                        border: '1px solid rgba(255,255,255,0.1)',
-                        color: '#ccc',
-                        padding: '12px',
-                        borderRadius: '12px',
-                        fontWeight: '600',
-                        fontSize: '0.9rem',
-                        cursor: 'pointer',
-                        transition: '0.3s'
+            <div className="job-card-actions">
+                <button
+                    className={applied ? "applied-btn" : "quick-apply-btn"}
+                    disabled={applied}
+                    onClick={async () => {
+                        const success = await onApply(job._id, matchScore);
+                        if (success) setApplied(true);
                     }}
                 >
-                    {isExpanded ? 'Hide Info' : 'Details'}
+                    {applied ? "Applied" : "Quick Apply"}
+                </button>
+
+                <button className="details-btn" onClick={() => setIsExpanded((value) => !value)}>
+                    {isExpanded ? "Hide Info" : "Details"}
                 </button>
             </div>
 
-            {/* Description Deatils */}
-            {/* Description Details (Ensure the field name matches your MongoDB "description") */}
-{isExpanded && (
-    <div style={{ 
-        marginTop: '20px', 
-        padding: '15px', 
-        background: 'rgba(0,0,0,0.3)', 
-        borderRadius: '12px',
-        display: 'block', // Force display
-        maxHeight: 'none', // Remove any restrictions
-        overflow: 'visible'
-    }}>
-        <p style={{ 
-            fontSize: '0.95rem', 
-            color: '#eee', 
-            lineHeight: '1.6', 
-            margin: 0,
-            whiteSpace: 'pre-wrap' // Keeps formatting
-        }}>
-            {job.description || "No description provided for this position."}
-        </p>
-        <div style={{ marginTop: '15px', display: 'flex', gap: '15px', borderTop: '1px solid #444', paddingTop: '10px' }}>
-            <span style={{color: '#888'}}>Type: <b style={{color: '#ccc'}}>{job.jobType}</b></span>
-            <span style={{color: '#888'}}>Level: <b style={{color: '#ccc'}}>{job.experienceLevel}</b></span>
-        </div>
-    </div>
-)}
+            {isExpanded && (
+                <div className="details-panel">
+                    <p>{job.description || "No description provided for this position."}</p>
+                    <div className="job-meta-row">
+                        <span>Type: <b>{job.jobType}</b></span>
+                        <span>Level: <b>{job.experienceLevel}</b></span>
+                        <span>Salary: <b>{job.salary || "Negotiable"}</b></span>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

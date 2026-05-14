@@ -1,294 +1,386 @@
-import React, { useEffect, useState } from 'react';
-import axios from 'axios';
-import JobCard from '../components/JobCard';
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import API from "../api";
+import JobCard from "../components/JobCard";
+
+const defaultChips = [
+    "AI",
+    "Frontend",
+    "Backend",
+    "Cloud",
+    "AWS",
+    "React",
+    "Python",
+    "Java",
+    "Remote",
+    "Internship",
+    "Full-time",
+];
+
+const chipSuggestions = {
+    AI: ["AI Chatbot", "Machine Learning", "NLP", "LLM Engineer"],
+    Frontend: ["React Developer", "UI/UX", "Next.js", "TypeScript"],
+    Backend: ["Node.js", "MongoDB", "Express", "REST API"],
+    Cloud: ["AWS", "Azure", "Docker", "Kubernetes"],
+    AWS: ["EC2", "Lambda", "DevOps", "Cloud Engineer"],
+    React: ["Redux", "React Native", "Tailwind", "Vite"],
+    Python: ["Django", "Flask", "Data Science", "FastAPI"],
+    Java: ["Spring Boot", "Microservices", "Hibernate"],
+};
+
+const getStoredJson = (key, fallback) => {
+    try {
+        return JSON.parse(localStorage.getItem(key)) ?? fallback;
+    } catch {
+        return fallback;
+    }
+};
+
+const enrichJobsWithApplications = (jobList, appList = []) => {
+    const appliedIds = new Set(appList.map((app) => String(app.jobId?._id || app.jobId)));
+
+    return jobList.map((job) => ({
+        ...job,
+        applied: appliedIds.has(String(job._id)),
+        confidence: job.matchScore > 0 ? Math.min(98, Math.max(52, job.matchScore + 8)) : null,
+    }));
+};
 
 const CandidateView = () => {
+    const navigate = useNavigate();
+    const user = getStoredJson("user", null);
+    const userId = user?.id || user?._id;
+
     const [jobs, setJobs] = useState([]);
-    const [loading, setLoading] = useState(false);
-    const [search, setSearch] = useState('');
+    const [applications, setApplications] = useState([]);
     const [resume, setResume] = useState(null);
-    const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [jobsLoading, setJobsLoading] = useState(true);
+    const [searchQuery, setSearchQuery] = useState("");
+    const [selectedChips, setSelectedChips] = useState([]);
+    const [suggestedChips, setSuggestedChips] = useState([]);
+    const [recentSearches, setRecentSearches] = useState(() => getStoredJson("recentSearches", []));
+    const [savedJobs, setSavedJobs] = useState(() => getStoredJson("savedJobs", []));
+    const [theme, setTheme] = useState(() => localStorage.getItem("theme") || "dark");
+    const [visibleCount, setVisibleCount] = useState(6);
+    const [toast, setToast] = useState(null);
+    const [showSavedOnly, setShowSavedOnly] = useState(false);
 
-    // Logged-in user
-    const user = JSON.parse(localStorage.getItem('user'));
-
-    // Fetch all jobs on page load
-    useEffect(() => {
-        fetchJobs();
+    const notify = useCallback((message, type = "success") => {
+        setToast({ message, type });
+        window.setTimeout(() => setToast(null), 2600);
     }, []);
 
-    // ---------------- FETCH ALL JOBS ----------------
-    const fetchJobs = async () => {
+    const fetchJobs = useCallback(async () => {
+        setJobsLoading(true);
         try {
-            setLoading(true);
-            const res = await axios.get('/api/jobs');
-
-            // Fetch candidate applications
-            let appliedJobIds = [];
-
-            if (user?.id) {
-                try {
-                    const appRes = await axios.get(`/api/jobs/my-applications/${user.id}`);
-                    appliedJobIds = appRes.data.map(app => app.jobId?._id || app.jobId);
-                } catch (err) {
-                    console.error('Application fetch error:', err);
-                }
-            }
-
-            const updatedJobs = res.data.map(job => ({
-                ...job,
-                applied: appliedJobIds.includes(job._id)
-            }));
-
-            setJobs(updatedJobs);
+            const res = await API.get("/api/jobs");
+            setJobs(enrichJobsWithApplications(res.data, applications));
         } catch (err) {
-            console.error(err);
-            setError('Failed to load jobs');
+            console.error("Error fetching jobs:", err);
+            notify("Could not load jobs.", "error");
         } finally {
-            setLoading(false);
+            setJobsLoading(false);
         }
+    }, [applications, notify]);
+
+    const fetchApplications = useCallback(async () => {
+        if (!userId) return [];
+
+        try {
+            const res = await API.get(`/api/jobs/my-applications/${userId}`);
+            setApplications(res.data);
+            setJobs((prevJobs) => enrichJobsWithApplications(prevJobs, res.data));
+            return res.data;
+        } catch (err) {
+            console.error("Error fetching applications:", err);
+            notify("Could not refresh applications.", "error");
+            return [];
+        }
+    }, [notify, userId]);
+
+    useEffect(() => {
+        const loadInitialData = async () => {
+            setJobsLoading(true);
+            try {
+                const [jobsRes, appsRes] = await Promise.all([
+                    API.get("/api/jobs"),
+                    userId ? API.get(`/api/jobs/my-applications/${userId}`) : Promise.resolve({ data: [] }),
+                ]);
+
+                setApplications(appsRes.data);
+                setJobs(enrichJobsWithApplications(jobsRes.data, appsRes.data));
+            } catch (err) {
+                console.error("Error loading candidate data:", err);
+                notify("Could not load candidate dashboard.", "error");
+            } finally {
+                setJobsLoading(false);
+            }
+        };
+
+        loadInitialData();
+    }, [notify, userId]);
+
+
+    useEffect(() => {
+        localStorage.setItem("savedJobs", JSON.stringify(savedJobs));
+    }, [savedJobs]);
+
+    useEffect(() => {
+        localStorage.setItem("recentSearches", JSON.stringify(recentSearches));
+    }, [recentSearches]);
+
+    useEffect(() => {
+        localStorage.setItem("theme", theme);
+    }, [theme]);
+
+    const saveRecentSearch = (query) => {
+        if (!query.trim()) return;
+        setRecentSearches((prev) => [query, ...prev.filter((item) => item !== query)].slice(0, 5));
     };
 
-    // ---------------- SEARCH JOBS ----------------
-    const handleSearch = async () => {
-        try {
-            setLoading(true);
+    const runSearch = async (query = searchQuery) => {
+        const cleanQuery = query.trim();
+        setVisibleCount(6);
 
-            const res = await axios.get(`/api/jobs/search?q=${search}`);
-
-            let appliedJobIds = [];
-
-            if (user?.id) {
-                const appRes = await axios.get(`/api/jobs/my-applications/${user.id}`);
-                appliedJobIds = appRes.data.map(app => app.jobId?._id || app.jobId);
-            }
-
-            const updatedJobs = res.data.map(job => ({
-                ...job,
-                applied: appliedJobIds.includes(job._id)
-            }));
-
-            setJobs(updatedJobs);
-        } catch (err) {
-            console.error(err);
-            setError('Search failed');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    // ---------------- RESUME MATCHING ----------------
-    const handleResumeUpload = async () => {
-        if (!resume) {
-            alert('Please upload a PDF resume');
+        if (!cleanQuery) {
+            await fetchJobs();
             return;
         }
 
         try {
-            setLoading(true);
-
-            const formData = new FormData();
-            formData.append('resume', resume);
-
-            const res = await axios.post('/api/jobs/match-pdf', formData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data'
-                }
-            });
-
-            let appliedJobIds = [];
-
-            if (user?.id) {
-                const appRes = await axios.get(`/api/jobs/my-applications/${user.id}`);
-                appliedJobIds = appRes.data.map(app => app.jobId?._id || app.jobId);
-            }
-
-            const updatedJobs = res.data.map(job => ({
-                ...job,
-                applied: appliedJobIds.includes(job._id)
-            }));
-
-            setJobs(updatedJobs);
+            setJobsLoading(true);
+            const res = await API.get(`/api/jobs/search?q=${encodeURIComponent(cleanQuery)}`);
+            setJobs(enrichJobsWithApplications(res.data, applications));
+            saveRecentSearch(cleanQuery);
         } catch (err) {
-            console.error(err);
-            alert(err.response?.data?.error || 'Resume matching failed');
+            console.error("Search failed:", err);
+            notify("Search failed.", "error");
+        } finally {
+            setJobsLoading(false);
+        }
+    };
+
+    const handleChipSelect = (chip) => {
+        const updatedChips = selectedChips.includes(chip) ? selectedChips : [...selectedChips, chip];
+        const query = updatedChips.join(", ");
+
+        setSelectedChips(updatedChips);
+        setSearchQuery(query);
+        setSuggestedChips((chipSuggestions[chip] || []).filter((item) => !updatedChips.includes(item)));
+        runSearch(query);
+    };
+
+    const handleResumeUpload = async () => {
+        if (!resume) {
+            notify("Please choose a PDF file first.", "error");
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append("resume", resume);
+
+        try {
+            setLoading(true);
+            const res = await API.post("/api/jobs/match-pdf", formData);
+            setJobs(enrichJobsWithApplications(res.data, applications));
+            setVisibleCount(6);
+            notify("Resume analyzed. Best matches are ranked first.");
+        } catch (err) {
+            console.error("Resume upload failed:", err);
+            notify("Failed to upload resume.", "error");
         } finally {
             setLoading(false);
         }
     };
 
-    // ---------------- QUICK APPLY ----------------
     const handleApply = async (jobId, matchScore) => {
+        if (!userId) {
+            notify("Please login first.", "error");
+            navigate("/auth");
+            return false;
+        }
+
         try {
-            if (!user?.id) {
-                alert('Please login first');
-                return false;
-            }
-
-            const selectedJob = jobs.find(job => job._id === jobId);
-
-            const payload = {
+            const res = await API.post("/api/jobs/apply", {
                 jobId,
-                candidateId: user.id,
-                matchScore: matchScore || 0,
-                candidateSkills: selectedJob?.matchedSkills || []
-            };
+                matchScore,
+                candidateSkills: selectedChips,
+            });
 
-            const res = await axios.post('/api/jobs/apply', payload);
-
-            // Update UI instantly
-            setJobs(prevJobs =>
-                prevJobs.map(job =>
-                    job._id === jobId
-                        ? { ...job, applied: true }
-                        : job
-                )
-            );
-
-            alert(res.data.message);
+            notify(res.data.message || "Application submitted.");
+            await fetchApplications();
             return true;
         } catch (err) {
-            console.error(err);
-            alert(err.response?.data?.error || 'Application failed');
+            console.error("Apply failed:", err);
+            notify(err.response?.data?.error || "Application failed.", "error");
             return false;
         }
     };
 
+    const toggleSavedJob = (jobId) => {
+        setSavedJobs((prev) =>
+            prev.includes(jobId) ? prev.filter((id) => id !== jobId) : [...prev, jobId]
+        );
+    };
+
+    const handleLogout = () => {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        navigate("/auth");
+    };
+
+    const filteredJobs = useMemo(
+        () => showSavedOnly ? jobs.filter((job) => savedJobs.includes(job._id)) : jobs,
+        [jobs, savedJobs, showSavedOnly]
+    );
+    const visibleJobs = useMemo(() => filteredJobs.slice(0, visibleCount), [filteredJobs, visibleCount]);
+    const acceptedCount = applications.filter((app) => app.status === "Accepted").length;
+    const averageMatch = jobs.length
+        ? Math.round(jobs.reduce((sum, job) => sum + (job.matchScore || 0), 0) / jobs.length)
+        : 0;
+
     return (
-        <div
-            style={{
-                minHeight: '100vh',
-                background: '#0f172a',
-                padding: '30px',
-                color: '#fff'
-            }}
-        >
-            {/* HEADER */}
-            <div style={{ textAlign: 'center', marginBottom: '35px' }}>
-                <h1
-                    style={{
-                        fontSize: '2.5rem',
-                        marginBottom: '10px',
-                        background: 'linear-gradient(to right, #60a5fa, #818cf8)',
-                        WebkitBackgroundClip: 'text',
-                        WebkitTextFillColor: 'transparent'
-                    }}
-                >
-                    AI Smart Job Matching Portal
-                </h1>
+        <div className={`candidate-page ${theme === "light" ? "light-mode" : ""}`}>
+            {toast && <div className={`toast ${toast.type}`}>{toast.message}</div>}
 
-                <p style={{ color: '#aaa' }}>
-                    Upload your resume or search jobs manually
-                </p>
-            </div>
+            <header className="candidate-header">
+                <div>
+                    <h1>Welcome, {user?.name || "Candidate"}</h1>
+                    <p>Find jobs, compare AI scores, and track applications.</p>
+                </div>
 
-            {/* SEARCH + RESUME */}
-            <div
-                style={{
-                    display: 'flex',
-                    flexWrap: 'wrap',
-                    gap: '15px',
-                    marginBottom: '30px',
-                    justifyContent: 'center'
-                }}
-            >
-                <input
-                    type='text'
-                    placeholder='Search by skills, title, location...'
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    style={{
-                        padding: '14px',
-                        borderRadius: '12px',
-                        border: '1px solid #334155',
-                        background: '#1e293b',
-                        color: '#fff',
-                        width: '320px',
-                        outline: 'none'
-                    }}
-                />
+                <div className="candidate-actions">
+                    <button className="ghost-btn" onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
+                        {theme === "dark" ? "Light Mode" : "Dark Mode"}
+                    </button>
+                    <button className="danger-btn" onClick={handleLogout}>Logout</button>
+                </div>
+            </header>
 
-                <button
-                    onClick={handleSearch}
-                    style={{
-                        padding: '14px 22px',
-                        borderRadius: '12px',
-                        border: 'none',
-                        background: '#6366f1',
-                        color: '#fff',
-                        cursor: 'pointer',
-                        fontWeight: 'bold'
-                    }}
-                >
-                    Search
+            <section className="candidate-stats">
+                <div><strong>{applications.length}</strong><span>Applications</span></div>
+                <div><strong>{acceptedCount}</strong><span>Accepted</span></div>
+                <button className={showSavedOnly ? "stat-filter active" : "stat-filter"} onClick={() => { setShowSavedOnly((value) => !value); setVisibleCount(6); }}>
+                    <strong>{savedJobs.length}</strong><span>{showSavedOnly ? "Showing Saved" : "Saved Jobs"}</span>
                 </button>
+                <div><strong>{averageMatch}%</strong><span>Avg Match</span></div>
+            </section>
 
-                <input
-                    type='file'
-                    accept='.pdf'
-                    onChange={(e) => setResume(e.target.files[0])}
-                    style={{
-                        color: '#fff'
-                    }}
-                />
-
-                <button
-                    onClick={handleResumeUpload}
-                    style={{
-                        padding: '14px 22px',
-                        borderRadius: '12px',
-                        border: 'none',
-                        background: '#10b981',
-                        color: '#fff',
-                        cursor: 'pointer',
-                        fontWeight: 'bold'
-                    }}
-                >
-                    Upload Resume
-                </button>
-            </div>
-
-            {/* ERROR */}
-            {error && (
-                <div
-                    style={{
-                        background: '#7f1d1d',
-                        color: '#fecaca',
-                        padding: '12px',
-                        borderRadius: '10px',
-                        marginBottom: '20px'
-                    }}
-                >
-                    {error}
+            <section className="candidate-panel">
+                <div className="search-row">
+                    <input
+                        type="text"
+                        placeholder="Search jobs, skills, locations..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onKeyDown={(e) => e.key === "Enter" && runSearch()}
+                    />
+                    <button className="primary-btn" onClick={() => runSearch()}>Search</button>
                 </div>
-            )}
 
-            {/* LOADING */}
-            {loading ? (
-                <div style={{ textAlign: 'center', marginTop: '50px' }}>
-                    <h2>Loading jobs...</h2>
+                {recentSearches.length > 0 && (
+                    <div className="recent-searches">
+                        <span>Recent:</span>
+                        {recentSearches.map((item) => (
+                            <button key={item} onClick={() => { setSearchQuery(item); runSearch(item); }}>
+                                {item}
+                            </button>
+                        ))}
+                    </div>
+                )}
+
+                <div className="chips-marquee">
+                    <div className="chips-track smooth-scroll">
+                        {[...defaultChips, ...defaultChips].map((chip, index) => (
+                            <button
+                                key={`${chip}-${index}`}
+                                className={selectedChips.includes(chip) ? "moving-chip selected" : "moving-chip"}
+                                onClick={() => handleChipSelect(chip)}
+                            >
+                                {chip}{selectedChips.includes(chip) ? " selected" : ""}
+                            </button>
+                        ))}
+                    </div>
                 </div>
-            ) : jobs.length === 0 ? (
-                <div style={{ textAlign: 'center', marginTop: '50px' }}>
-                    <h2>No jobs found</h2>
+
+                {suggestedChips.length > 0 && (
+                    <div className="ai-suggestions">
+                        <h3>AI Suggestions</h3>
+                        <div>
+                            {suggestedChips.map((chip) => (
+                                <button key={chip} onClick={() => handleChipSelect(chip)}>
+                                    {chip} +
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                )}
+            </section>
+
+            <section className="resume-panel">
+                <div>
+                    <h2>Upload Resume for AI Matching</h2>
+                    <p>PDF resumes are matched against required skills and ranked by score.</p>
                 </div>
-            ) : (
-                <div
-                    style={{
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
-                        gap: '20px'
-                    }}
-                >
-                    {jobs.map(job => (
-                        <JobCard
-                            key={job._id}
-                            job={job}
-                            onApply={handleApply}
+                <div className="resume-upload-wrapper">
+                    <label className="custom-file-upload">
+                        Choose Resume PDF
+                        <input
+                            className="hidden-file-input"
+                            type="file"
+                            accept=".pdf"
+                            onChange={(e) => setResume(e.target.files?.[0] || null)}
                         />
-                    ))}
+                    </label>
+                    <span className="selected-file-name">{resume ? resume.name : "No file selected"}</span>
+                    <button className="success-btn" disabled={loading} onClick={handleResumeUpload}>
+                        {loading ? "Analyzing..." : "Upload & Match"}
+                    </button>
                 </div>
-            )}
+            </section>
+
+            <section>
+                <div className="section-title-row">
+                    <h2>{showSavedOnly ? "Saved Jobs" : "Available Jobs"}</h2>
+                    <div className="title-actions">
+                        {showSavedOnly && (
+                            <button className="ghost-btn compact" onClick={() => setShowSavedOnly(false)}>
+                                View all jobs
+                            </button>
+                        )}
+                        <span>{filteredJobs.length} results</span>
+                    </div>
+                </div>
+
+                {jobsLoading ? (
+                    <div className="results-grid">
+                        {[1, 2, 3, 4].map((item) => <div className="job-skeleton" key={item} />)}
+                    </div>
+                ) : filteredJobs.length === 0 ? (
+                    <p className="empty-state">{showSavedOnly ? "No saved jobs yet. Use the Save button on jobs you like." : "No jobs found."}</p>
+                ) : (
+                    <>
+                        <div className="results-grid">
+                            {visibleJobs.map((job) => (
+                                <JobCard
+                                    key={job._id}
+                                    job={job}
+                                    onApply={handleApply}
+                                    isSaved={savedJobs.includes(job._id)}
+                                    onToggleSave={toggleSavedJob}
+                                />
+                            ))}
+                        </div>
+
+                        {visibleCount < filteredJobs.length && (
+                            <button className="load-more-btn" onClick={() => setVisibleCount((count) => count + 6)}>
+                                Load more jobs
+                            </button>
+                        )}
+                    </>
+                )}
+            </section>
         </div>
     );
 };

@@ -5,7 +5,13 @@ import API from '../api';
 const ApplicantsList = () => {
     const [applicants, setApplicants] = useState([]);
     const [searchTerm, setSearchTerm] = useState("");
+    const [toast, setToast] = useState(null);
     const navigate = useNavigate();
+
+    const notify = (message, type = "success") => {
+        setToast({ message, type });
+        window.setTimeout(() => setToast(null), 2400);
+    };
 
     const fetchApplicants = useCallback(async () => {
         const res = await API.get('/api/jobs/applicants');
@@ -31,12 +37,12 @@ const handleStatusUpdate = async (applicationId, newStatus) => {
             app._id === applicationId ? { ...app, status: newStatus } : app
         ));
 
-        alert(`Application ${newStatus}!`);
+        notify(`Application ${newStatus}.`);
 
         await fetchApplicants();
     } catch (err) {
         console.error("Status update failed:", err);
-        alert("Failed to update UI. Please refresh.")
+        notify("Failed to update status.", "error");
     }
 };
 
@@ -48,6 +54,7 @@ const filteredApplicants = applicants.filter((app) =>
 
     return (
         <div className="applicants-wrapper">
+            {toast && <div className={`toast ${toast.type}`}>{toast.message}</div>}
             <div className="applicants-nav">
                 <h2 style={{color: 'white', margin: 0}}>Incoming <span style={{color: '#646cff'}}>Applications</span></h2>
                 <button className="btn-return" onClick={() => navigate('/admin')}>

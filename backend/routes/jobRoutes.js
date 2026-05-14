@@ -56,6 +56,14 @@ const getMatchSummary = (score, matchedSkills, missingSkills, query) => {
     return "💡 Potential match. Focus on gaining experience in " + missingSkills.slice(0, 2).join(' and ') + ".";
 };
 
+const normalizeJobPayload = (body) => ({
+    ...body,
+    salary: body.salary || 'Negotiable',
+    requiredSkills: Array.isArray(body.requiredSkills)
+        ? body.requiredSkills.map(skill => String(skill).trim()).filter(Boolean)
+        : String(body.requiredSkills || '').split(',').map(skill => skill.trim()).filter(Boolean)
+});
+
 // --- NEW: GET ALL JOBS (Base Route) ---
 router.get('/', async (req, res) => {
     try {
@@ -93,7 +101,8 @@ router.get('/search', async (req, res) => {
                     { location: { $in: searchRegexes } },
                     { requiredSkills: { $in: searchRegexes } },
                     { jobType: { $in: searchRegexes } },
-                    { experienceLevel: { $in: searchRegexes } }
+                    { experienceLevel: { $in: searchRegexes } },
+                    { salary: { $in: searchRegexes } }
                 ]
             };
         }
@@ -135,7 +144,7 @@ router.get('/search', async (req, res) => {
 // import fs from 'fs';
 // import { upload } from './yourMulterConfig'; // or wherever you defined 'upload'
 
-router.post('/match-pdf', upload.single('resume'), async (req, res) => {
+router.post('/match-pdf', protect, authorize('candidate'), upload.single('resume'), async (req, res) => {
     try {
         // 1. Check if Multer caught the file
         if (!req.file) {
@@ -197,11 +206,12 @@ router.post('/match-pdf', upload.single('resume'), async (req, res) => {
     // ONLY Recruiters can POST
 router.post('/', protect, authorize('recruiter'), async (req, res) => {
     try {
-        const job = new Job(req.body);
+        const job = new Job(normalizeJobPayload(req.body));
         await job.save();
         res.status(201).json({ message: "Job posted successfully!", job });
     } catch (err) {
-        res.status(400).json({ error: "Failed to post job" });
+        console.error("Post Job Error:", err.message);
+        res.status(400).json({ error: err.message || "Failed to post job" });
     }
 });
 
@@ -215,21 +225,27 @@ router.delete('/:id', protect, authorize('recruiter'), async (req, res) => {
     }
 });
     //  ONLY Recruiters can UPDATE
-router.put('/:id', async (req, res) => {
+router.put('/:id', protect, authorize('recruiter'), async (req, res) => {
     try {
-        const updatedJob = await Job.findByIdAndUpdate(req.params.id, req.body, { returnDocument: 'after' });
+        const updatedJob = await Job.findByIdAndUpdate(
+            req.params.id,
+            normalizeJobPayload(req.body),
+            { new: true, runValidators: true }
+        );
         res.json({ message: "Job updated!", job: updatedJob });
     } catch (err) {
-        res.status(400).json({ error: "Update failed" });
+        console.error("Update Job Error:", err.message);
+        res.status(400).json({ error: err.message || "Update failed" });
     }
 });
 
 
 // --- Route for Quick Apply (Candidate)---
-router.post('/apply', async (req, res) => {
+router.post('/apply', protect, authorize('candidate'), async (req, res) => {
     try{
         // Ensure same as frontend:
-    const { jobId, candidateId, matchScore, candidateSkills } = req.body;
+    const { jobId, matchScore, candidateSkills } = req.body;
+    const candidateId = req.user.id;
 
     // 1. Check if already applied:
     const alreadyApplied = await Application.findOne({ jobId, candidateId });
@@ -256,9 +272,13 @@ router.post('/apply', async (req, res) => {
 }});
 
 // --- GET applications for a specific candidate ---
-router.get('/my-applications/:candidateId', async (req, res) => {
+router.get('/my-applications/:candidateId', protect, async (req, res) => {
     try {
         const { candidateId } = req.params;
+        if (req.user.role !== 'recruiter' && String(req.user.id) !== String(candidateId)) {
+            return res.status(403).json({ error: "You can only view your own applications" });
+        }
+
         const applications = await Application.find({ candidateId })
             .populate('jobId', 'title location company workMode') 
             .sort({ createdAt: -1 }); // Show newest first
@@ -270,7 +290,7 @@ router.get('/my-applications/:candidateId', async (req, res) => {
 });
 
 // Pulls Score to send Recruiter
-router.get('/applicants', async (req, res) => {
+router.get('/applicants', protect, authorize('recruiter'), async (req, res) => {
     try {
         const apps = await Application.find()
             .populate('jobId', 'title location')
@@ -285,7 +305,7 @@ router.get('/applicants', async (req, res) => {
 // GET all applicants (Recruiter Only)
 
 // Route to update application status (Approve/Reject)
-router.patch('/applicants/:id', async (req, res) => {
+router.patch('/applicants/:id', protect, authorize('recruiter'), async (req, res) => {
     try {
         const { id } = req.params;
         const { status } = req.body;

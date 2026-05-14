@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import API from '../api';
 
@@ -7,11 +7,18 @@ const RecruiterView = () => {
     const navigate = useNavigate();
     const [formData, setFormData] = useState({
         title: '', location: '', workMode: 'Office', description: '', 
-        requiredSkills: '', jobType: 'Full-time', experienceLevel: 'Entry Level'
+        requiredSkills: '', jobType: 'Full-time', experienceLevel: 'Entry Level', salary: 'Negotiable'
     });
     const [jobs, setJobs] = useState([]);
+    const [applicants, setApplicants] = useState([]);
     const [editingId, setEditingId] = useState(null);
+    const [toast, setToast] = useState(null);
     const token = localStorage.getItem('token');
+
+    const notify = (message, type = 'success') => {
+        setToast({ message, type });
+        window.setTimeout(() => setToast(null), 2600);
+    };
 
     const fetchAdminJobs = useCallback(async () => {
         try {
@@ -22,7 +29,37 @@ const RecruiterView = () => {
         } catch (err) { console.error("Fetch Error:", err); }
     }, [token]);
 
-    useEffect(() => { if (token) fetchAdminJobs(); }, [fetchAdminJobs, token]);
+    const fetchApplicants = useCallback(async () => {
+        try {
+            const res = await API.get('/api/jobs/applicants');
+            setApplicants(res.data);
+        } catch (err) {
+            console.error("Applicants fetch failed:", err);
+        }
+    }, []);
+
+    useEffect(() => {
+        if (token) {
+            fetchAdminJobs();
+            fetchApplicants();
+        }
+    }, [fetchAdminJobs, fetchApplicants, token]);
+
+    const analytics = useMemo(() => {
+        const accepted = applicants.filter(app => app.status === 'Accepted').length;
+        const pending = applicants.filter(app => app.status === 'Pending').length;
+        const averageMatch = applicants.length
+            ? Math.round(applicants.reduce((sum, app) => sum + (app.matchScore || 0), 0) / applicants.length)
+            : 0;
+
+        return {
+            jobs: jobs.length,
+            applicants: applicants.length,
+            accepted,
+            pending,
+            averageMatch
+        };
+    }, [applicants, jobs.length]);
 
     const handleLogout = () => {
         localStorage.removeItem('token');
@@ -31,7 +68,7 @@ const RecruiterView = () => {
     };
 
     const resetForm = () => {
-        setFormData({ title: '', location: '', workMode: 'Office', description: '', requiredSkills: '', jobType: 'Full-time', experienceLevel: 'Entry Level' });
+        setFormData({ title: '', location: '', workMode: 'Office', description: '', requiredSkills: '', jobType: 'Full-time', experienceLevel: 'Entry Level', salary: 'Negotiable' });
         setEditingId(null);
     };
 
@@ -42,7 +79,9 @@ const RecruiterView = () => {
         const payload = { 
             ...formData, 
             postedBy: recruiterId, 
-            requiredSkills: typeof formData.requiredSkills === 'string' ? formData.requiredSkills.split(',').map(s => s.trim()) : formData.requiredSkills
+            requiredSkills: typeof formData.requiredSkills === 'string'
+                ? formData.requiredSkills.split(',').map(s => s.trim()).filter(Boolean)
+                : formData.requiredSkills
         };
 
         try {
@@ -54,9 +93,10 @@ const RecruiterView = () => {
             }
             resetForm();
             fetchAdminJobs();
+            notify(editingId ? "Job updated." : "Job published.");
         } catch (err) {
             console.error("Save job failed:", err);
-            alert("Action failed.");
+            notify(err.response?.data?.error || "Action failed.", "error");
         }
     };
 
@@ -65,14 +105,16 @@ const RecruiterView = () => {
         try {
             await API.delete(`/api/jobs/${id}`, { headers: { Authorization: `Bearer ${token}` } });
             fetchAdminJobs();
+            notify("Job deleted.");
         } catch (err) {
             console.error("Delete job failed:", err);
-            alert("Delete failed.");
+            notify("Delete failed.", "error");
         }
     };
 
     return (
         <div className="recruiter-container">
+            {toast && <div className={`toast ${toast.type}`}>{toast.message}</div>}
             {/* Header / Nav */}
             <header className="recruiter-header">
                 <h1 className="header-title">Recruiter <span>Dashboard</span></h1>
@@ -84,6 +126,14 @@ const RecruiterView = () => {
                     <button className="btn-logout" onClick={handleLogout}>Logout</button>
                 </nav>
             </header>
+
+            <section className="analytics-grid">
+                <div className="analytics-card"><strong>{analytics.jobs}</strong><span>Active Jobs</span></div>
+                <div className="analytics-card"><strong>{analytics.applicants}</strong><span>Total Applicants</span></div>
+                <div className="analytics-card"><strong>{analytics.averageMatch}%</strong><span>Avg Match</span></div>
+                <div className="analytics-card"><strong>{analytics.accepted}</strong><span>Accepted</span></div>
+                <div className="analytics-card"><strong>{analytics.pending}</strong><span>Pending Review</span></div>
+            </section>
 
             {/* JOB FORM */}
             <div className="job-form-card">
@@ -137,6 +187,18 @@ const RecruiterView = () => {
                                 <option value="Senior Level">Senior Level</option>
                             </select>
                         </div>
+                        <div className="input-group">
+                            <label>Salary</label>
+                            <select className="input-field" value={formData.salary} onChange={(e) => setFormData({...formData, salary: e.target.value})}>
+                                <option value="Negotiable">Negotiable</option>
+                                <option value="Unpaid">Unpaid</option>
+                                <option value="INR 25,000">INR 25,000</option>
+                                <option value="INR 50,000">INR 50,000</option>
+                                <option value="INR 75,000">INR 75,000</option>
+                                <option value="INR 100,000">INR 100,000</option>
+                                <option value="INR 150,000+">INR 150,000+</option>
+                            </select>
+                        </div>
                     </div>
 
                     <div className="input-group">
@@ -157,6 +219,51 @@ const RecruiterView = () => {
                 </form>
             </div>
 
+            <section className="ranking-section">
+                <div className="section-title-row">
+                    <h3>Candidate Ranking</h3>
+                    <button className="btn-applicants" onClick={() => navigate('/admin/applicants')}>Manage All</button>
+                </div>
+
+                {applicants.length === 0 ? (
+                    <p className="empty-state">No applicants yet.</p>
+                ) : (
+                    <table className="ranking-table">
+                        <thead>
+                            <tr>
+                                <th>Rank</th>
+                                <th>Candidate</th>
+                                <th>Role</th>
+                                <th>Match</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {[...applicants]
+                                .sort((a, b) => (b.matchScore || 0) - (a.matchScore || 0))
+                                .slice(0, 6)
+                                .map((app, index) => (
+                                    <tr key={app._id}>
+                                        <td><span className="rank-badge">#{index + 1}</span></td>
+                                        <td>
+                                            <strong>{app.candidateId?.name || 'Candidate'}</strong>
+                                            <span className="ranking-subtext">{app.candidateId?.email || 'No email'}</span>
+                                        </td>
+                                        <td>{app.jobId?.title || 'Role'}</td>
+                                        <td>
+                                            <div className="score-cell">
+                                                <b>{app.matchScore || 0}%</b>
+                                                <span><i style={{ width: `${Math.min(app.matchScore || 0, 100)}%` }} /></span>
+                                            </div>
+                                        </td>
+                                        <td><span className={`ranking-status ${String(app.status).toLowerCase()}`}>{app.status}</span></td>
+                                    </tr>
+                                ))}
+                        </tbody>
+                    </table>
+                )}
+            </section>
+
             {/* Active Listings Section */}
             <div className="listings-section">
                 <h3>💼 Active Listings ({jobs.length})</h3>
@@ -165,7 +272,7 @@ const RecruiterView = () => {
                         <div>
                             <h4>{job.title}</h4>
                             <p style={{ margin: '5px 0 0 0', fontSize: '0.85rem', color: '#aaa' }}>
-                                📍 {job.location} {(job.workMode)} • {job.jobType}
+                                Location: {job.location} ({job.workMode}) - {job.jobType} - {job.salary || 'Negotiable'}
                             </p>
                         </div>
                         <div style={{ display: 'flex', gap: '10px' }}>

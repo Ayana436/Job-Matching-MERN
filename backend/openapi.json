@@ -1,0 +1,134 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Job Matching MERN API",
+    "version": "1.0.0",
+    "description": "Core API documentation for authentication, jobs, resume matching, applications, and recruiter review."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:5000"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  },
+  "paths": {
+    "/api/auth/register": {
+      "post": {
+        "summary": "Register a candidate or recruiter",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name", "email", "password", "role"],
+                "properties": {
+                  "name": { "type": "string" },
+                  "email": { "type": "string" },
+                  "password": { "type": "string" },
+                  "role": { "type": "string", "enum": ["candidate", "recruiter"] }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "User created" },
+          "400": { "description": "Invalid data or duplicate email" }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "summary": "Login and receive a JWT",
+        "responses": {
+          "200": { "description": "Authenticated" },
+          "401": { "description": "Invalid credentials" }
+        }
+      }
+    },
+    "/api/jobs": {
+      "get": {
+        "summary": "List all jobs",
+        "responses": {
+          "200": { "description": "Jobs returned" }
+        }
+      },
+      "post": {
+        "summary": "Create a job listing",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "201": { "description": "Job created" },
+          "403": { "description": "Recruiter role required" }
+        }
+      }
+    },
+    "/api/jobs/search": {
+      "get": {
+        "summary": "Search jobs by comma-separated terms",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "schema": { "type": "string" },
+            "example": "React, Remote"
+          }
+        ],
+        "responses": {
+          "200": { "description": "Matching jobs returned" }
+        }
+      }
+    },
+    "/api/jobs/match-pdf": {
+      "post": {
+        "summary": "Upload a resume PDF and receive ranked job matches",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "resume": { "type": "string", "format": "binary" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Ranked matches returned" },
+          "400": { "description": "PDF missing or invalid" }
+        }
+      }
+    },
+    "/api/jobs/apply": {
+      "post": {
+        "summary": "Candidate applies to a job",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Application submitted or already exists" },
+          "403": { "description": "Candidate role required" }
+        }
+      }
+    },
+    "/api/jobs/applicants": {
+      "get": {
+        "summary": "Recruiter retrieves ranked applicants",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Applicants returned" },
+          "403": { "description": "Recruiter role required" }
+        }
+      }
+    }
+  }
+}

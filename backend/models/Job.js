@@ -14,6 +14,11 @@ const jobSchema = new mongoose.Schema({
     },
     jobType: { type: String, enum: ['Full-time', 'Part-time', 'Contract', 'Internship'], default: 'Full-time' },
     experienceLevel: { type: String, enum: ['Entry Level', 'Mid Level', 'Senior Level'], default: 'Entry Level' },
+    salary: {
+        type: String,
+        trim: true,
+        default: 'Negotiable'
+    },
     postedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
 }, { timestamps: true });
 
