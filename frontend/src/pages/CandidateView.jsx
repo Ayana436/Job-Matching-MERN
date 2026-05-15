@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import API from "../api";
 import JobCard from "../components/JobCard";
 
+
 const defaultChips = [
     "AI",
     "Frontend",
@@ -47,11 +48,14 @@ const enrichJobsWithApplications = (jobList, appList = []) => {
 };
 
 const CandidateView = () => {
+    console.log("CandidateView rendered");
     const navigate = useNavigate();
     const user = getStoredJson("user", null);
     const userId = user?.id || user?._id;
 
-    const [jobs, setJobs] = useState([]);
+const [allJobs, setAllJobs] = useState([]);
+const [jobs, setJobs] = useState([]);
+const [hasMatchedResults, setHasMatchedResults] = useState(false);
     const [applications, setApplications] = useState([]);
     const [resume, setResume] = useState(null);
     const [loading, setLoading] = useState(false);
@@ -63,26 +67,35 @@ const CandidateView = () => {
     const [savedJobs, setSavedJobs] = useState(() => getStoredJson("savedJobs", []));
     const [theme, setTheme] = useState(() => localStorage.getItem("theme") || "dark");
     const [visibleCount, setVisibleCount] = useState(6);
-    const [toast, setToast] = useState(null);
     const [showSavedOnly, setShowSavedOnly] = useState(false);
+    const [toast, setToast] = useState(null);
+    
 
     const notify = useCallback((message, type = "success") => {
         setToast({ message, type });
         window.setTimeout(() => setToast(null), 2600);
     }, []);
 
-    const fetchJobs = useCallback(async () => {
-        setJobsLoading(true);
-        try {
-            const res = await API.get("/api/jobs");
-            setJobs(enrichJobsWithApplications(res.data, applications));
-        } catch (err) {
-            console.error("Error fetching jobs:", err);
-            notify("Could not load jobs.", "error");
-        } finally {
-            setJobsLoading(false);
+const fetchJobs = useCallback(async (preserveMatched = false) => {
+    try {
+        const res = await API.get("/api/jobs");
+
+        const enrichedJobs = enrichJobsWithApplications(
+            res.data,
+            applications
+        );
+
+        setAllJobs(enrichedJobs);
+
+        // ONLY overwrite visible jobs when not preserving AI matched jobs
+        if (!preserveMatched) {
+            setJobs(enrichedJobs);
         }
-    }, [applications, notify]);
+
+    } catch (err) {
+        console.error("Error fetching jobs:", err);
+    }
+}, [applications]);
 
     const fetchApplications = useCallback(async () => {
         if (!userId) return [];
@@ -99,28 +112,72 @@ const CandidateView = () => {
         }
     }, [notify, userId]);
 
-    useEffect(() => {
-        const loadInitialData = async () => {
-            setJobsLoading(true);
-            try {
-                const [jobsRes, appsRes] = await Promise.all([
-                    API.get("/api/jobs"),
-                    userId ? API.get(`/api/jobs/my-applications/${userId}`) : Promise.resolve({ data: [] }),
-                ]);
+useEffect(() => {
+    let isMounted = true;
 
-                setApplications(appsRes.data);
-                setJobs(enrichJobsWithApplications(jobsRes.data, appsRes.data));
-            } catch (err) {
-                console.error("Error loading candidate data:", err);
-                notify("Could not load candidate dashboard.", "error");
-            } finally {
+    const loadInitialData = async () => {
+        console.log("INITIAL FETCH RUNNING")
+        if (hasMatchedResults) return;
+
+        setJobsLoading(true);
+
+        try {
+            const jobsRes = await API.get("/api/jobs");
+
+            let appsData = [];
+
+            if (userId) {
+                const appsRes = await API.get(
+                    `/api/jobs/my-applications/${userId}`
+                );
+
+                appsData = appsRes.data;
+
+                if (isMounted) {
+                    setApplications(appsData);
+                }
+            }
+
+            if (isMounted) {
+                const enrichedJobs = enrichJobsWithApplications(
+    jobsRes.data,
+    appsData
+);
+
+setAllJobs(enrichedJobs);
+setJobs(enrichedJobs);
+            }
+        } catch (err) {
+            console.error("Error loading candidate data:", err);
+        } finally {
+            if (isMounted) {
                 setJobsLoading(false);
             }
-        };
+        }
+    };
 
-        loadInitialData();
-    }, [notify, userId]);
+    loadInitialData();
+    console.log("iFR")
 
+    return () => {
+        isMounted = false;
+    };
+}, []);
+
+useEffect(() => {
+    const interval = setInterval(() => {
+
+        if (!hasMatchedResults && selectedChips.length === 0) {
+            fetchJobs();
+        }
+
+        fetchApplications();
+
+    }, 10000);
+
+    return () => clearInterval(interval);
+
+}, [fetchJobs, fetchApplications, hasMatchedResults, selectedChips.length]);
 
     useEffect(() => {
         localStorage.setItem("savedJobs", JSON.stringify(savedJobs));
@@ -144,7 +201,7 @@ const CandidateView = () => {
         setVisibleCount(6);
 
         if (!cleanQuery) {
-            await fetchJobs();
+            setJobs(allJobs);
             return;
         }
 
@@ -161,38 +218,108 @@ const CandidateView = () => {
         }
     };
 
-    const handleChipSelect = (chip) => {
-        const updatedChips = selectedChips.includes(chip) ? selectedChips : [...selectedChips, chip];
-        const query = updatedChips.join(", ");
+const handleChipSelect = async (chip) => {
 
-        setSelectedChips(updatedChips);
-        setSearchQuery(query);
-        setSuggestedChips((chipSuggestions[chip] || []).filter((item) => !updatedChips.includes(item)));
-        runSearch(query);
-    };
+    let updatedChips = [];
 
-    const handleResumeUpload = async () => {
-        if (!resume) {
-            notify("Please choose a PDF file first.", "error");
-            return;
-        }
+    // REMOVE chip if already selected
+    if (selectedChips.includes(chip)) {
+        updatedChips = selectedChips.filter((c) => c !== chip);
+    } else {
+        // ADD chip
+        updatedChips = [...selectedChips, chip];
+    }
 
-        const formData = new FormData();
-        formData.append("resume", resume);
+    setSelectedChips(updatedChips);
 
-        try {
-            setLoading(true);
-            const res = await API.post("/api/jobs/match-pdf", formData);
-            setJobs(enrichJobsWithApplications(res.data, applications));
-            setVisibleCount(6);
-            notify("Resume analyzed. Best matches are ranked first.");
-        } catch (err) {
-            console.error("Resume upload failed:", err);
-            notify("Failed to upload resume.", "error");
-        } finally {
-            setLoading(false);
-        }
-    };
+    const query = updatedChips.join(", ");
+
+    setSearchQuery(query);
+
+    // update suggestions
+    const newSuggestions = updatedChips.flatMap(
+        (selected) => chipSuggestions[selected] || []
+    );
+
+    setSuggestedChips(
+        [...new Set(newSuggestions)].filter(
+            (item) => !updatedChips.includes(item)
+        )
+    );
+
+    // IF NO CHIPS SELECTED
+    if (updatedChips.length === 0) {
+
+        setHasMatchedResults(false);
+
+        setJobs(allJobs);
+
+        return;
+    }
+
+    // SEARCH USING CHIPS
+    try {
+
+        setJobsLoading(true);
+
+        const res = await API.get(
+            `/api/jobs/search?q=${encodeURIComponent(query)}`
+        );
+
+        setJobs(
+            enrichJobsWithApplications(res.data, applications)
+        );
+
+    } catch (err) {
+
+        console.error("Chip search failed:", err);
+
+    } finally {
+
+        setJobsLoading(false);
+    }
+};
+
+const handleResumeUpload = async () => {
+    console.log("Resume upload triggered");
+    
+
+    if (!resume) {
+        notify("Please choose a PDF file first.", "error");
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append("resume", resume);
+
+    try {
+        setLoading(true);
+
+        const res = await API.post("/api/jobs/match-pdf", formData);
+        console.log(res.data);
+
+        const matchedJobs = enrichJobsWithApplications(
+            res.data,
+            applications
+        );
+
+        // ONLY update displayed jobs
+        setJobs([...matchedJobs]);
+
+        // keep track that AI matched results are active
+        setHasMatchedResults(true);
+
+        // reset visible cards count
+        setVisibleCount(6);
+
+        notify("Resume analyzed. Best matches are ranked first.");
+    } catch (err) {
+        console.error("Resume upload failed:", err);
+        notify("Failed to upload resume.", "error");
+    } finally {
+        setLoading(false);
+    }
+};
 
     const handleApply = async (jobId, matchScore) => {
         if (!userId) {
@@ -218,11 +345,22 @@ const CandidateView = () => {
         }
     };
 
-    const toggleSavedJob = (jobId) => {
-        setSavedJobs((prev) =>
-            prev.includes(jobId) ? prev.filter((id) => id !== jobId) : [...prev, jobId]
-        );
-    };
+const toggleSavedJob = (jobId) => {
+    const alreadySaved = savedJobs.includes(jobId);
+
+    setSavedJobs((prev) =>
+        alreadySaved
+            ? prev.filter((id) => id !== jobId)
+            : [...prev, jobId]
+    );
+
+    notify(
+        alreadySaved
+            ? "Removed from saved jobs"
+            : "Job saved successfully",
+        "success"
+    );
+};
 
     const handleLogout = () => {
         localStorage.removeItem("token");
@@ -261,7 +399,7 @@ const CandidateView = () => {
             <section className="candidate-stats">
                 <div><strong>{applications.length}</strong><span>Applications</span></div>
                 <div><strong>{acceptedCount}</strong><span>Accepted</span></div>
-                <button className={showSavedOnly ? "stat-filter active" : "stat-filter"} onClick={() => { setShowSavedOnly((value) => !value); setVisibleCount(6); }}>
+                <button className={showSavedOnly ? "stat-filter active" : "stat-filter"} onClick={() => { setShowSavedOnly((prev) => !prev); setVisibleCount(6); }}>
                     <strong>{savedJobs.length}</strong><span>{showSavedOnly ? "Showing Saved" : "Saved Jobs"}</span>
                 </button>
                 <div><strong>{averageMatch}%</strong><span>Avg Match</span></div>
@@ -344,12 +482,13 @@ const CandidateView = () => {
                 <div className="section-title-row">
                     <h2>{showSavedOnly ? "Saved Jobs" : "Available Jobs"}</h2>
                     <div className="title-actions">
-                        {showSavedOnly && (
-                            <button className="ghost-btn compact" onClick={() => setShowSavedOnly(false)}>
+                        {hasMatchedResults && (
+                            <button className="ghost-btn compact" onClick={() => {setJobs(allJobs); setHasMatchedResults(false);}}>
                                 View all jobs
                             </button>
                         )}
                         <span>{filteredJobs.length} results</span>
+                        
                     </div>
                 </div>
 
@@ -381,8 +520,10 @@ const CandidateView = () => {
                     </>
                 )}
             </section>
+            {toast && <div className={`toast ${toast.type}`}>{toast.message}</div>}
         </div>
-    );
+    
+);
 };
 
 export default CandidateView;

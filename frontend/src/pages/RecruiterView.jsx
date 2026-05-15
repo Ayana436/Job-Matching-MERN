@@ -45,6 +45,15 @@ const RecruiterView = () => {
         }
     }, [fetchAdminJobs, fetchApplicants, token]);
 
+    useEffect(() => {
+    const interval = setInterval(() => {
+        fetchAdminJobs();
+        fetchApplicants();
+    }, 10000);
+
+    return () => clearInterval(interval);
+}, [fetchAdminJobs, fetchApplicants]);
+
     const analytics = useMemo(() => {
         const accepted = applicants.filter(app => app.status === 'Accepted').length;
         const pending = applicants.filter(app => app.status === 'Pending').length;

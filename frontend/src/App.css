@@ -1380,6 +1380,7 @@ box-shadow: 0 0 20px rgba(202, 204, 228, 0.153);
     text-align: left;
     cursor: pointer;
     font: inherit;
+    transition: 0.3s ease;
 }
 
 .stat-filter.active {
@@ -1845,3 +1846,33 @@ box-shadow: 0 0 20px rgba(202, 204, 228, 0.153);
         transform: translateX(-40%);
     }
     }
+.toast {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+    padding: 14px 20px;
+    border-radius: 12px;
+    color: white;
+    font-weight: 600;
+    animation: fadeSlide 0.3s ease;
+}
+
+.toast-success {
+    background: #22c55e;
+}
+
+.toast-error {
+    background: #ef4444;
+}
+
+@keyframes fadeSlide {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

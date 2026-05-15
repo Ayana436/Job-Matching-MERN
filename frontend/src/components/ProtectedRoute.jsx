@@ -1,18 +1,32 @@
 // Bouncer for routes
-import { Navigate } from 'react-router-dom';
+import { Navigate } from "react-router-dom";
 
 const ProtectedRoute = ({ children, allowedRole }) => {
-    const token = localStorage.getItem('token');
-    const user = JSON.parse(localStorage.getItem('user'));
+    const token = localStorage.getItem("token");
 
-    // 1. Not logged in? Go to Auth
+    let user = null;
+
+    try {
+        user = JSON.parse(localStorage.getItem("user"));
+    } catch (err) {
+        console.error("Invalid user in localStorage");
+    }
+
+    // no token
     if (!token) {
         return <Navigate to="/auth" replace />;
     }
 
-    // 2. Logged in, but wrong role? Go to home
+    // invalid user object
+    if (!user) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        return <Navigate to="/auth" replace />;
+    }
+
+    // wrong role
     if (allowedRole && user.role !== allowedRole) {
-        return <Navigate to="/" replace />;
+        return <Navigate to="/auth" replace />;
     }
 
     return children;

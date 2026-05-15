@@ -1,42 +1,69 @@
 // handles both login & signup in one card
+import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import API from '../api';
 
 const AuthPage = () => {
+    const navigate = useNavigate();
     const [isLogin, setIsLogin] = useState(true);
     const [role, setRole] = useState('candidate');
     const [formData, setFormData] = useState({ name: '', email: '', password: '' });
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        const endpoint = isLogin ? '/api/auth/login' : '/api/auth/register';
-        const payload = isLogin 
-            ? { email: formData.email, password: formData.password } 
-            : { ...formData, role };
+const handleSubmit = async (e) => {
+    e.preventDefault();
 
-        try {
-            const res = await API.post(endpoint, payload);
-            if (isLogin) {
-                const { token, user } = res.data;
-                localStorage.setItem('token', token);
-                const userToSave = {
-                    id: user.id || user._id,
-                    name: user.name,
-                    role: user.role
-                };
-                localStorage.setItem('user', JSON.stringify(userToSave));
-                window.location.href =
-    user.role === "recruiter"
-        ? "/admin"
-        : "/candidate";
-            } else {
-                alert("Registration Successful! Please log in.");
-                setIsLogin(true);
-            }
-        } catch (err) {
-            alert(err.response?.data?.error || "Auth Error: Check backend connection");
+    const endpoint = isLogin
+        ? "/api/auth/login"
+        : "/api/auth/register";
+
+    const payload = isLogin
+        ? {
+              email: formData.email,
+              password: formData.password,
+          }
+        : {
+              ...formData,
+              role,
+          };
+
+    try {
+        const res = await API.post(endpoint, payload);
+
+        if (isLogin) {
+            const token = res.data.token;
+            const loggedInUser = res.data.user;
+
+            localStorage.setItem("token", token);
+
+            const userToSave = {
+                id: loggedInUser.id || loggedInUser._id,
+                name: loggedInUser.name,
+                role: loggedInUser.role,
+            };
+
+            localStorage.setItem(
+                "user",
+                JSON.stringify(userToSave)
+            );
+
+            navigate(
+                loggedInUser.role === "recruiter"
+                    ? "/admin"
+                    : "/candidate"
+            );
+        } else {
+            alert("Registration Successful! Please log in.");
+            setIsLogin(true);
         }
-    };
+    } catch (err) {
+        console.error(err);
+
+        alert(
+            err.response?.data?.error ||
+            "Auth Error: Check backend connection"
+        );
+    }
+};
 
     return (
         <div className="auth-container">

@@ -190,10 +190,30 @@ router.post('/match-pdf', protect, authorize('candidate'), upload.single('resume
         // fs.unlinkSync(req.file.path); 
 
         const sortedMatches = matches
-            .filter(m => m.matchScore > 0)
-            .sort((a, b) => b.matchScore - a.matchScore);
+    .filter(m => m.matchScore > 0)
+    .sort((a, b) => b.matchScore - a.matchScore)
+    .map((job, index) => ({
+        ...job,
 
-        res.status(200).json(sortedMatches);
+        // helps frontend know this came from AI matching
+        aiMatched: true,
+
+        // visual ranking
+        rank: index + 1,
+
+        // force unique render updates
+        refreshedAt: Date.now()
+    }));
+
+console.log(
+    "Matched Jobs Returned:",
+    sortedMatches.map(j => ({
+        title: j.title,
+        score: j.matchScore
+    }))
+);
+
+res.status(200).json(sortedMatches);
     } catch (err) {
         console.error("PDF Parsing Error:", err);
         // Clean up file even if parsing fails
