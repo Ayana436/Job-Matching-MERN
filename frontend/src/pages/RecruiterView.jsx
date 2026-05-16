@@ -13,6 +13,7 @@ const RecruiterView = () => {
     const [applicants, setApplicants] = useState([]);
     const [editingId, setEditingId] = useState(null);
     const [toast, setToast] = useState(null);
+    const [activeRecruiterTab, setActiveRecruiterTab] = useState("all");
     const token = localStorage.getItem('token');
 
     const notify = (message, type = 'success') => {
@@ -69,6 +70,31 @@ const RecruiterView = () => {
             averageMatch
         };
     }, [applicants, jobs.length]);
+
+    const filteredApplicants = useMemo(() => {
+
+    switch (activeRecruiterTab) {
+
+        case "accepted":
+            return applicants.filter(
+                app => app.status === "Accepted"
+            );
+
+        case "pending":
+            return applicants.filter(
+                app => app.status === "Pending"
+            );
+
+        case "rejected":
+            return applicants.filter(
+                app => app.status === "Rejected"
+            );
+
+        default:
+            return applicants;
+    }
+
+}, [applicants, activeRecruiterTab]);
 
     const handleLogout = () => {
         localStorage.removeItem('token');
@@ -136,13 +162,73 @@ const RecruiterView = () => {
                 </nav>
             </header>
 
-            <section className="analytics-grid">
-                <div className="analytics-card"><strong>{analytics.jobs}</strong><span>Active Jobs</span></div>
-                <div className="analytics-card"><strong>{analytics.applicants}</strong><span>Total Applicants</span></div>
-                <div className="analytics-card"><strong>{analytics.averageMatch}%</strong><span>Avg Match</span></div>
-                <div className="analytics-card"><strong>{analytics.accepted}</strong><span>Accepted</span></div>
-                <div className="analytics-card"><strong>{analytics.pending}</strong><span>Pending Review</span></div>
-            </section>
+<section className="analytics-grid">
+
+    <div className="analytics-card">
+        <strong>{analytics.jobs}</strong>
+        <span>Active Jobs</span>
+    </div>
+
+    <button
+        className={
+            activeRecruiterTab === "all"
+                ? "analytics-card active-card"
+                : "analytics-card"
+        }
+        onClick={() =>
+            setActiveRecruiterTab(
+                activeRecruiterTab === "all"
+                    ? "none"
+                    : "all"
+            )
+        }
+    >
+        <strong>{analytics.applicants}</strong>
+        <span>Total Applicants</span>
+    </button>
+
+    <div className="analytics-card">
+        <strong>{analytics.averageMatch}%</strong>
+        <span>Avg Match</span>
+    </div>
+
+    <button
+        className={
+            activeRecruiterTab === "accepted"
+                ? "analytics-card active-card"
+                : "analytics-card"
+        }
+        onClick={() =>
+            setActiveRecruiterTab(
+                activeRecruiterTab === "accepted"
+                    ? "none"
+                    : "accepted"
+            )
+        }
+    >
+        <strong>{analytics.accepted}</strong>
+        <span>Accepted</span>
+    </button>
+
+    <button
+        className={
+            activeRecruiterTab === "pending"
+                ? "analytics-card active-card"
+                : "analytics-card"
+        }
+        onClick={() =>
+            setActiveRecruiterTab(
+                activeRecruiterTab === "pending"
+                    ? "none"
+                    : "pending"
+            )
+        }
+    >
+        <strong>{analytics.pending}</strong>
+        <span>Pending Review</span>
+    </button>
+
+</section>
 
             {/* JOB FORM */}
             <div className="job-form-card">
@@ -248,7 +334,7 @@ const RecruiterView = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {[...applicants]
+                            {[...filteredApplicants]
                                 .sort((a, b) => (b.matchScore || 0) - (a.matchScore || 0))
                                 .slice(0, 6)
                                 .map((app, index) => (

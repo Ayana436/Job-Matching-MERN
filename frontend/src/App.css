@@ -1876,3 +1876,37 @@ box-shadow: 0 0 20px rgba(202, 204, 228, 0.153);
         transform: translateY(0);
     }
 }
+.status-btn {
+    border: none;
+    padding: 12px 18px;
+    border-radius: 12px;
+    font-weight: 600;
+    cursor: not-allowed;
+    color: white;
+    transition: 0.3s ease;
+}
+
+.status-btn.pending {
+    background: linear-gradient(135deg, #ff9800, #ffb74d);
+    box-shadow: 0 4px 14px rgba(255, 152, 0, 0.3);
+}
+
+.status-btn.accepted {
+    background: linear-gradient(135deg, #4caf50, #66bb6a);
+    box-shadow: 0 4px 14px rgba(76, 175, 80, 0.3);
+}
+
+.status-btn.rejected {
+    background: linear-gradient(135deg, #f44336, #ef5350);
+    box-shadow: 0 4px 14px rgba(244, 67, 54, 0.3);
+}
+
+.accepted-filter.active {
+    border-color: #4caf50;
+    background: rgba(76, 175, 80, 0.12);
+}
+
+.rejected-filter.active {
+    border-color: #f44336;
+    background: rgba(244, 67, 54, 0.12);
+}

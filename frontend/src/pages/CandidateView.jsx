@@ -37,14 +37,34 @@ const getStoredJson = (key, fallback) => {
     }
 };
 
-const enrichJobsWithApplications = (jobList, appList = []) => {
-    const appliedIds = new Set(appList.map((app) => String(app.jobId?._id || app.jobId)));
+const enrichJobsWithApplications = (jobList, applications = []) => {
 
-    return jobList.map((job) => ({
-        ...job,
-        applied: appliedIds.has(String(job._id)),
-        confidence: job.matchScore > 0 ? Math.min(98, Math.max(52, job.matchScore + 8)) : null,
-    }));
+    return jobList.map((job) => {
+
+        const application = applications.find(
+            (app) => String(app.jobId?._id || app.jobId) === String(job._id)
+        );
+
+        return {
+            ...job,
+
+            applied: !!application,
+
+            applicationStatus:
+                application?.status || "pending",
+
+            applicationId:
+                application?._id || null,
+
+                confidence:
+                job.matchScore > 0
+                    ? Math.min(
+                            98,
+                            Math.max(50, job.matchScore + 8)
+                        )
+                    : null,
+        };
+    });
 };
 
 const CandidateView = () => {
@@ -66,8 +86,8 @@ const [hasMatchedResults, setHasMatchedResults] = useState(false);
     const [recentSearches, setRecentSearches] = useState(() => getStoredJson("recentSearches", []));
     const [savedJobs, setSavedJobs] = useState(() => getStoredJson("savedJobs", []));
     const [theme, setTheme] = useState(() => localStorage.getItem("theme") || "dark");
+    const [activeTab, setActiveTab] = useState("all");
     const [visibleCount, setVisibleCount] = useState(6);
-    const [showSavedOnly, setShowSavedOnly] = useState(false);
     const [toast, setToast] = useState(null);
     
 
@@ -173,7 +193,7 @@ useEffect(() => {
 
         fetchApplications();
 
-    }, 10000);
+    }, 2000);
 
     return () => clearInterval(interval);
 
@@ -368,10 +388,56 @@ const toggleSavedJob = (jobId) => {
         navigate("/auth");
     };
 
-    const filteredJobs = useMemo(
-        () => showSavedOnly ? jobs.filter((job) => savedJobs.includes(job._id)) : jobs,
-        [jobs, savedJobs, showSavedOnly]
-    );
+    const pendingJobs = jobs.filter(
+    (job) => job.applicationStatus === "Pending"
+);
+
+const acceptedJobs = jobs.filter(
+    (job) => job.applicationStatus === "Accepted"
+);
+
+const rejectedJobs = jobs.filter(
+    (job) => job.applicationStatus === "Rejected"
+);
+
+const filteredJobs = useMemo(() => {
+
+    let filtered = jobs;
+
+    switch (activeTab) {
+
+        case "applications":
+            return jobs.filter(job => job.applied);
+
+        case "saved":
+            return jobs.filter(job =>
+                savedJobs.includes(job._id)
+            );
+
+        case "pending":
+            return jobs.filter(
+                job => job.applicationStatus === "Pending"
+            );
+
+        case "accepted":
+            return jobs.filter(
+                job => job.applicationStatus === "Accepted"
+            );
+
+        case "rejected":
+            return jobs.filter(
+                job => job.applicationStatus === "Rejected"
+            );
+
+        default:
+            return jobs;
+    }
+
+}, [jobs, savedJobs, activeTab]);
+
+    // return filtered;
+
+// }, [jobs, savedJobs, showSavedOnly, applicationFilter]);
     const visibleJobs = useMemo(() => filteredJobs.slice(0, visibleCount), [filteredJobs, visibleCount]);
     const acceptedCount = applications.filter((app) => app.status === "Accepted").length;
     const averageMatch = jobs.length
@@ -396,14 +462,114 @@ const toggleSavedJob = (jobId) => {
                 </div>
             </header>
 
-            <section className="candidate-stats">
-                <div><strong>{applications.length}</strong><span>Applications</span></div>
-                <div><strong>{acceptedCount}</strong><span>Accepted</span></div>
-                <button className={showSavedOnly ? "stat-filter active" : "stat-filter"} onClick={() => { setShowSavedOnly((prev) => !prev); setVisibleCount(6); }}>
-                    <strong>{savedJobs.length}</strong><span>{showSavedOnly ? "Showing Saved" : "Saved Jobs"}</span>
-                </button>
-                <div><strong>{averageMatch}%</strong><span>Avg Match</span></div>
-            </section>
+<section className="candidate-stats">
+
+    <button
+        className={
+            activeTab === "applications"
+                ? "stat-filter active"
+                : "stat-filter"
+        }
+        onClick={() => {
+            setActiveTab(
+                activeTab === "applications"
+                    ? "all"
+                    : "applications"
+            );
+
+            setVisibleCount(6);
+        }}
+    >
+        <strong>{applications.length}</strong>
+        <span>Applications</span>
+    </button>
+
+    <button
+        className={
+            activeTab === "saved"
+                ? "stat-filter active"
+                : "stat-filter"
+        }
+        onClick={() => {
+            setActiveTab(
+                activeTab === "saved"
+                    ? "all"
+                    : "saved"
+            );
+
+            setVisibleCount(6);
+        }}
+    >
+        <strong>{savedJobs.length}</strong>
+        <span>Saved Jobs</span>
+    </button>
+
+    <button
+        className={
+            activeTab === "pending"
+                ? "stat-filter active"
+                : "stat-filter"
+        }
+        onClick={() => {
+            setActiveTab(
+                activeTab === "pending"
+                    ? "all"
+                    : "pending"
+            );
+
+            setVisibleCount(6);
+        }}
+    >
+        <strong>{pendingJobs.length}</strong>
+        <span>Pending</span>
+    </button>
+
+    <button
+        className={
+            activeTab === "accepted"
+                ? "stat-filter active accepted-filter"
+                : "stat-filter"
+        }
+        onClick={() => {
+            setActiveTab(
+                activeTab === "accepted"
+                    ? "all"
+                    : "accepted"
+            );
+
+            setVisibleCount(6);
+        }}
+    >
+        <strong>{acceptedJobs.length}</strong>
+        <span>Accepted</span>
+    </button>
+
+    <button
+        className={
+            activeTab === "rejected"
+                ? "stat-filter active rejected-filter"
+                : "stat-filter"
+        }
+        onClick={() => {
+            setActiveTab(
+                activeTab === "rejected"
+                    ? "all"
+                    : "rejected"
+            );
+
+            setVisibleCount(6);
+        }}
+    >
+        <strong>{rejectedJobs.length}</strong>
+        <span>Rejected</span>
+    </button>
+
+    <div>
+        <strong>{averageMatch}%</strong>
+        <span>Avg Match</span>
+    </div>
+
+</section>
 
             <section className="candidate-panel">
                 <div className="search-row">
@@ -480,7 +646,21 @@ const toggleSavedJob = (jobId) => {
 
             <section>
                 <div className="section-title-row">
-                    <h2>{showSavedOnly ? "Saved Jobs" : "Available Jobs"}</h2>
+                    <h2>
+    {
+        activeTab === "saved"
+            ? "Saved Jobs"
+            : activeTab === "applications"
+            ? "My Applications"
+            : activeTab === "accepted"
+            ? "Accepted Jobs"
+            : activeTab === "pending"
+            ? "Pending Jobs"
+            : activeTab === "rejected"
+            ? "Rejected Jobs"
+            : "Available Jobs"
+    }
+</h2>
                     <div className="title-actions">
                         {hasMatchedResults && (
                             <button className="ghost-btn compact" onClick={() => {setJobs(allJobs); setHasMatchedResults(false);}}>
@@ -497,7 +677,15 @@ const toggleSavedJob = (jobId) => {
                         {[1, 2, 3, 4].map((item) => <div className="job-skeleton" key={item} />)}
                     </div>
                 ) : filteredJobs.length === 0 ? (
-                    <p className="empty-state">{showSavedOnly ? "No saved jobs yet. Use the Save button on jobs you like." : "No jobs found."}</p>
+                    <p className="empty-state">
+    {
+        activeTab === "saved"
+            ? "No saved jobs yet."
+            : activeTab === "applications"
+            ? "You haven't applied to any jobs yet."
+            : "No jobs found."
+    }
+</p>
                 ) : (
                     <>
                         <div className="results-grid">
@@ -508,6 +696,7 @@ const toggleSavedJob = (jobId) => {
                                     onApply={handleApply}
                                     isSaved={savedJobs.includes(job._id)}
                                     onToggleSave={toggleSavedJob}
+                                    applicationStatus={job.applicationStatus}
                                 />
                             ))}
                         </div>
