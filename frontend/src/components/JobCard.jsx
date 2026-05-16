@@ -28,6 +28,20 @@ const JobCard = ({
 
     const matchScore = job.matchScore ?? 0;
 
+    const matchedCount = job.matchedSkills?.length || 0;
+
+    const missingCount = job.missingSkills?.length || 0;
+
+    const totalSkills =
+        matchedCount + missingCount;
+
+    const skillCoverage =
+        totalSkills > 0
+            ? Math.round(
+                (matchedCount / totalSkills) * 100
+            )
+            : 0;
+
     const getButtonText = () => {
         if (!currentStatus) return "Quick Apply";
 
@@ -108,6 +122,15 @@ const JobCard = ({
                     <span className="match-label">
                         Match
                     </span>
+                        <span className="ats-score-text">
+                    {matchScore >= 80
+                        ? "Strong Match"
+                        : matchScore >= 60
+                        ? "Good Match"
+                        : matchScore >= 40
+                        ? "Average Match"
+                        : "Low Match"}
+                        </span>
 
                     {job.confidence && (
                         <span className="confidence-pill">
@@ -119,33 +142,72 @@ const JobCard = ({
 
             {(job.matchedSkills?.length > 0 ||
                 job.missingSkills?.length > 0) && (
-                <div className="skill-chips">
 
-                    {job.matchedSkills?.map((skill) => (
-                        <span
-                            key={`match-${skill}`}
-                            className="chip match"
-                        >
-                            Match: {skill}
-                        </span>
-                    ))}
+                <div className="ai-analysis-panel">
 
-                    {job.missingSkills?.map((skill) => (
-                        <span
-                            key={`missing-${skill}`}
-                            className="chip missing"
-                        >
-                            Missing: {skill}
+                    <div className="analysis-header">
+
+                        <strong>AI Skill Analysis</strong>
+
+                        <span className="coverage-pill">
+                            {skillCoverage}% Skill Coverage
                         </span>
-                    ))}
+
+                    </div>
+
+                {job.matchedSkills?.length > 0 && (
+                        <div className="skills-group">
+
+                            <p className="skills-title success">
+                                Matched Skills ({matchedCount})
+                            </p>
+
+                            <div className="skill-chips">
+                                {job.matchedSkills.map((skill) => (
+                                    <span
+                                        key={`match-${skill}`}
+                                        className="chip match"
+                                    >
+                                        {skill}
+                                    </span>
+                                ))}
+                            </div>
+
+                        </div>
+                    )}
+
+                {job.missingSkills?.length > 0 && (
+                        <div className="skills-group">
+
+                            <p className="skills-title danger">
+                                Missing Skills ({missingCount})
+                            </p>
+
+                            <div className="skill-chips">
+                                {job.missingSkills.map((skill) => (
+                                    <span
+                                        key={`missing-${skill}`}
+                                        className="chip missing"
+                                    >
+                                        {skill}
+                                    </span>
+                                ))}
+                            </div>
+
+                        </div>
+                    )}
+
                 </div>
             )}
 
-            {job.aiSummary && (
-                <div className="ai-summary">
-                    <strong>AI Insights:</strong> {job.aiSummary}
+            <div className="ai-summary">
+                <div className="summary-header">
+                    AI Recommendation
                 </div>
-            )}
+                <p>
+                    {job.aiSummary}
+                </p>
+            </div>
 
             <div className="job-card-actions">
 

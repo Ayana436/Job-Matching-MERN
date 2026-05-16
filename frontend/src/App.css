@@ -1933,3 +1933,58 @@ box-shadow: 0 0 20px rgba(202, 204, 228, 0.153);
     opacity:0.4;
     cursor:not-allowed;
 }
+
+/* AI ANALYSIS + Skills + Summary */
+.ai-analysis-panel{
+    margin-top:16px;
+    background:rgba(255,255,255,0.04);
+    border:1px solid rgba(255,255,255,0.08);
+    border-radius:14px;
+    padding:14px;
+}
+
+.analysis-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:14px;
+}
+
+.coverage-pill{
+    background:#646cff22;
+    color:#8ea2ff;
+    padding:4px 10px;
+    border-radius:999px;
+    font-size:0.75rem;
+    font-weight:600;
+}
+
+.skills-group{
+    margin-bottom:14px;
+}
+
+.skills-title{
+    margin-bottom:8px;
+    font-weight:700;
+    font-size:0.9rem;
+}
+
+.skills-title.success{
+    color:#4caf50;
+}
+
+.skills-title.danger{
+    color:#ff6b6b;
+}
+
+.ats-score-text{
+    font-size:0.8rem;
+    opacity:0.8;
+    font-weight:600;
+}
+
+.summary-header{
+    font-weight:700;
+    margin-bottom:8px;
+    color:#8ea2ff;
+}
