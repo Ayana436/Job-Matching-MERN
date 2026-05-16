@@ -15,6 +15,8 @@ const RecruiterView = () => {
     const [editingId, setEditingId] = useState(null);
     const [toast, setToast] = useState(null);
     const [activeRecruiterTab, setActiveRecruiterTab] = useState("all");
+    const [currentPage, setCurrentPage] = useState(1);
+    const applicantsPerPage = 8;
     const token = localStorage.getItem('token');
 
     const notify = (message, type = 'success') => {
@@ -126,6 +128,19 @@ useEffect(() => {
     }
 
 }, [applicants, activeRecruiterTab]);
+
+    const totalPages = Math.ceil(
+    filteredApplicants.length / applicantsPerPage
+);
+
+    const startIndex =
+    (currentPage - 1) * applicantsPerPage;
+
+    const paginatedApplicants =
+    filteredApplicants.slice(
+        startIndex,
+        startIndex + applicantsPerPage
+    );
 
     const handleLogout = () => {
         localStorage.removeItem('token');
@@ -355,7 +370,7 @@ useEffect(() => {
                             </tr>
                         </thead>
                         <tbody>
-                            {[...filteredApplicants]
+                            {[...paginatedApplicants]
                                 .sort((a, b) => (b.matchScore || 0) - (a.matchScore || 0))
                                 .slice(0, visibleApplicants)
                                 .map((app, index) => (
@@ -377,7 +392,33 @@ useEffect(() => {
                                 ))}
                         </tbody>
                     </table>
+                    
                 )}
+                <div className="pagination-controls">
+
+    <button
+        disabled={currentPage === 1}
+        onClick={() =>
+            setCurrentPage(prev => prev - 1)
+        }
+    >
+        ← Previous
+    </button>
+
+    <span>
+        Page {currentPage} of {totalPages || 1}
+    </span>
+
+    <button
+        disabled={currentPage >= totalPages}
+        onClick={() =>
+            setCurrentPage(prev => prev + 1)
+        }
+    >
+        Next →
+    </button>
+
+</div>
                 {filteredApplicants.length > visibleApplicants && (
     <button
         className="load-more-btn"

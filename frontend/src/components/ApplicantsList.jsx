@@ -6,6 +6,8 @@ const ApplicantsList = () => {
     const [applicants, setApplicants] = useState([]);
     const [searchTerm, setSearchTerm] = useState("");
     const [toast, setToast] = useState(null);
+    const [currentPage, setCurrentPage] = useState(1);
+    const applicantsPerPage = 8;
     const navigate = useNavigate();
 
     const notify = (message, type = "success") => {
@@ -14,15 +16,36 @@ const ApplicantsList = () => {
     };
 
     const fetchApplicants = useCallback(async () => {
-        const res = await API.get('/api/jobs/applicants');
+        const token = localStorage.getItem("token");
+
+        const res = await API.get(`/api/jobs/applicants?t=${Date.now()}`,
+    {
+        headers: {
+            Authorization: `Bearer ${token}`,
+            "Cache-Control": "no-cache"
+        }
+    });
         setApplicants(res.data);
     }, []);
 
-    useEffect(() => {
+useEffect(() => {
+
+    fetchApplicants().catch((err) => {
+        console.error("Fetch applicants failed:", err);
+    });
+
+    // AUTO REFRESH
+    const interval = setInterval(() => {
+
         fetchApplicants().catch((err) => {
-            console.error("Fetch applicants failed:", err);
+            console.error("Auto refresh failed:", err);
         });
-    }, [fetchApplicants]);
+
+    }, 1000);
+
+    return () => clearInterval(interval);
+
+}, [fetchApplicants]);
 
 const handleStatusUpdate = async (applicationId, newStatus) => {
     try {
@@ -51,6 +74,19 @@ const filteredApplicants = applicants.filter((app) =>
     app.candidateSkills?.some(skill => skill.toLowerCase().includes(searchTerm.toLowerCase()))
 );
 
+const totalPages = Math.ceil(
+    filteredApplicants.length / applicantsPerPage
+);
+
+const startIndex =
+    (currentPage - 1) * applicantsPerPage;
+
+const paginatedApplicants =
+    filteredApplicants.slice(
+        startIndex,
+        startIndex + applicantsPerPage
+    );
+
 
     return (
         <div className="applicants-wrapper">
@@ -71,7 +107,7 @@ const filteredApplicants = applicants.filter((app) =>
                 className="auth-input" // Reusing your existing input style
                 // style={{ maxWidth: '400px' }}
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
             />
         </div>
         <div className="results-count">
@@ -91,7 +127,7 @@ const filteredApplicants = applicants.filter((app) =>
                     </tr>
                 </thead>
                 <tbody>
-                    {filteredApplicants.map(app => (
+                    {paginatedApplicants.map(app => (
                         <tr key={app._id} style={{ borderBottom: '1px solid #1e293b' }}>
                             <td style={{ padding: '15px' }}><div style={{ fontWeight: 'bold' }}>
                                 {app.candidateId?.name}</div>
@@ -120,6 +156,31 @@ const filteredApplicants = applicants.filter((app) =>
                     ))}
                 </tbody>
             </table>
+                <div className="pagination-controls">
+
+                <button
+                    disabled={currentPage === 1}
+                    onClick={() =>
+                        setCurrentPage(prev => prev - 1)
+                    }
+                >
+                    ← Previous
+                </button>
+
+                <span>
+                    Page {currentPage} of {totalPages || 1}
+                </span>
+
+                <button
+                    disabled={currentPage >= totalPages}
+                    onClick={() =>
+                        setCurrentPage(prev => prev + 1)
+                    }
+                >
+                    Next →
+                </button>
+
+                </div>
         </div>
     );
 };
