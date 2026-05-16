@@ -5,6 +5,7 @@ import fs from "fs";
 import Job from '../models/Job.js';
 import Application from '../models/Application.js';
 import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs';
+import { calculateSimilarity, preprocessText } from '../utils/nlpUtils.js';
 import { authorize, protect } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
@@ -166,25 +167,97 @@ router.post('/match-pdf', protect, authorize('candidate'), upload.single('resume
 
         const allJobs = await Job.find().lean();
         const matches = allJobs.map(job => {
-            const matchedSkills = job.requiredSkills.filter(skill => {
-                const safeSkill = escapeRegExp(skill);
-                const regex = new RegExp(`(^|\\s|[\\W_])${safeSkill}($|\\s|[\\W_])`, 'i'); 
-                return regex.test(resumeText);
-            });
 
-            const missingSkills = job.requiredSkills.filter(s => !matchedSkills.includes(s));
-            const score = job.requiredSkills.length > 0 
-                ? Math.round((matchedSkills.length / job.requiredSkills.length) * 100) 
-                : 0;
+    const requiredSkills = job.requiredSkills || [];
 
-            return {
-                ...job,
-                matchScore: score,
-                matchedSkills,
-                missingSkills,
-                aiSummary: getMatchSummary(score, matchedSkills, missingSkills)
-            };
-        });
+    // keyword skill matching
+    const matchedSkills = requiredSkills.filter(skill => {
+
+        const safeSkill = escapeRegExp(skill);
+
+        const regex = new RegExp(
+            `(^|\\s|[\\W_])${safeSkill}($|\\s|[\\W_])`,
+            'i'
+        );
+
+        return regex.test(resumeText);
+    });
+
+    const missingSkills =
+        requiredSkills.filter(
+            skill => !matchedSkills.includes(skill)
+        );
+
+    // combine job fields into NLP text
+    const jobContent = `
+        ${job.title}
+        ${job.description}
+        ${requiredSkills.join(" ")}
+        ${job.location}
+        ${job.jobType}
+        ${job.experienceLevel}
+    `;
+
+    // TF-IDF cosine similarity
+    const similarityScore =
+        calculateSimilarity(
+            resumeText,
+            jobContent
+        );
+
+    // weighted hybrid AI score
+    const skillScore =
+        requiredSkills.length > 0
+            ? Math.round(
+                (matchedSkills.length /
+                      requiredSkills.length) * 100
+            )
+            : 0;
+
+    // final AI score
+    const finalScore = Math.round(
+        (skillScore * 0.6) +
+        (similarityScore * 0.4)
+    );
+
+    let rankingReason = "";
+
+    if (finalScore >= 80) {
+        rankingReason =
+            "Excellent semantic and skill match.";
+    } else if (finalScore >= 60) {
+        rankingReason =
+            "Strong candidate with relevant experience.";
+    } else if (finalScore >= 40) {
+        rankingReason =
+            "Moderate relevance to job requirements.";
+    } else {
+        rankingReason =
+            "Limited alignment with required profile.";
+    }
+
+    return {
+        ...job,
+
+        matchScore: finalScore,
+
+        semanticScore: similarityScore,
+
+        skillScore: skillScore,
+
+        matchedSkills,
+
+        missingSkills,
+
+        rankingReason,
+
+        aiSummary: getMatchSummary(
+            finalScore,
+            matchedSkills,
+            missingSkills
+        )
+    };
+});
 
         // 3. (Optional) Delete the file after processing to save space
         // fs.unlinkSync(req.file.path); 
@@ -245,10 +318,13 @@ router.post('/apply', protect, authorize('candidate'), async (req, res) => {
     try{
         // Ensure same as frontend:
     const { jobId, matchScore, candidateSkills } = req.body;
-    const candidateId = req.user.id;
+    const candidateId = req.user._id || req.user.id;
 
     // 1. Check if already applied:
-    const alreadyApplied = await Application.findOne({ jobId, candidateId });
+    const alreadyApplied = await Application.findOne({ 
+        jobId: String(jobId), 
+        candidateId: String(candidateId) 
+    });
         if (alreadyApplied) {
             // use retrun to stop the function & prevent "headers already sent error"
             return res.status(200).json({ message: "You have already applied for this position.", alreadyApplied: true });
@@ -295,7 +371,13 @@ router.get('/applicants', protect, authorize('recruiter'), async (req, res) => {
         const apps = await Application.find()
             .populate('jobId', 'title location')
             .populate('candidateId', 'name email')
-            .sort({ matchScore: -1 }); // Sort by highest score by default
+            .sort({ createdAt: -1 });
+            res.set({
+                "Cache-Control":"no-cache",
+                Pragma: "no-cache",
+                Expires: "0"
+            });
+             // Sort by highest score by default || new entries
         res.status(200).json(apps);
     } catch (err) {
         res.status(500).json({ error: "Failed to fetch applicants" });

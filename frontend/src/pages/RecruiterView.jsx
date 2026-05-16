@@ -11,6 +11,7 @@ const RecruiterView = () => {
     });
     const [jobs, setJobs] = useState([]);
     const [applicants, setApplicants] = useState([]);
+    const [visibleApplicants, setVisibleApplicants] = useState(6);
     const [editingId, setEditingId] = useState(null);
     const [toast, setToast] = useState(null);
     const [activeRecruiterTab, setActiveRecruiterTab] = useState("all");
@@ -32,12 +33,27 @@ const RecruiterView = () => {
 
     const fetchApplicants = useCallback(async () => {
         try {
-            const res = await API.get('/api/jobs/applicants');
-            setApplicants(res.data);
+            const timestamp = new Date().getTime();
+
+            const res = await API.get(
+                `/api/jobs/applicants?t=${timestamp}`,
+                {
+                    headers:{
+                        Authorization: `Bearer ${token}`,
+                        "Cache-Control":"no-cache"
+                    }
+                }
+            );
+            setApplicants(
+    res.data.map(app => ({
+        ...app,
+        refreshKey: Math.random()
+    }))
+);
         } catch (err) {
             console.error("Applicants fetch failed:", err);
         }
-    }, []);
+    }, [token]);
 
     useEffect(() => {
         if (token) {
@@ -46,25 +62,40 @@ const RecruiterView = () => {
         }
     }, [fetchAdminJobs, fetchApplicants, token]);
 
-    useEffect(() => {
+useEffect(() => {
+
+    if (!token) return;
+
+    // INITIAL FETCH
+    fetchAdminJobs();
+    fetchApplicants();
+
     const interval = setInterval(() => {
+
         fetchAdminJobs();
         fetchApplicants();
-    }, 10000);
+
+    }, 1000);
 
     return () => clearInterval(interval);
-}, [fetchAdminJobs, fetchApplicants]);
+
+}, [token, fetchAdminJobs, fetchApplicants]);
 
     const analytics = useMemo(() => {
-        const accepted = applicants.filter(app => app.status === 'Accepted').length;
-        const pending = applicants.filter(app => app.status === 'Pending').length;
+        const accepted = applicants.filter(
+            app => String(app.status).toLowerCase() === 'accepted'
+        ).length;
+
+        const pending = applicants.filter(
+            app => String(app.status).toLowerCase() === 'pending'
+        ).length;
         const averageMatch = applicants.length
             ? Math.round(applicants.reduce((sum, app) => sum + (app.matchScore || 0), 0) / applicants.length)
             : 0;
 
         return {
             jobs: jobs.length,
-            applicants: applicants.length,
+            applicants: [...new Set(applicants.map(app => app._id))].length,
             accepted,
             pending,
             averageMatch
@@ -76,18 +107,18 @@ const RecruiterView = () => {
     switch (activeRecruiterTab) {
 
         case "accepted":
-            return applicants.filter(
-                app => app.status === "Accepted"
-            );
+    return applicants.filter(
+        app => String(app.status).toLowerCase() === "accepted"
+    );
 
         case "pending":
             return applicants.filter(
-                app => app.status === "Pending"
+                app => String(app.status).toLowerCase() === "pending"
             );
 
         case "rejected":
             return applicants.filter(
-                app => app.status === "Rejected"
+                app => String(app.status).toLowerCase() === "rejected"
             );
 
         default:
@@ -169,23 +200,13 @@ const RecruiterView = () => {
         <span>Active Jobs</span>
     </div>
 
-    <button
-        className={
-            activeRecruiterTab === "all"
-                ? "analytics-card active-card"
-                : "analytics-card"
-        }
-        onClick={() =>
-            setActiveRecruiterTab(
-                activeRecruiterTab === "all"
-                    ? "none"
-                    : "all"
-            )
-        }
-    >
-        <strong>{analytics.applicants}</strong>
-        <span>Total Applicants</span>
-    </button>
+<button
+    className="analytics-card active-card"
+    onClick={() => setActiveRecruiterTab("all")}
+>
+    <strong>{applicants.length}</strong>
+    <span>Total Applicants</span>
+</button>
 
     <div className="analytics-card">
         <strong>{analytics.averageMatch}%</strong>
@@ -336,9 +357,9 @@ const RecruiterView = () => {
                         <tbody>
                             {[...filteredApplicants]
                                 .sort((a, b) => (b.matchScore || 0) - (a.matchScore || 0))
-                                .slice(0, 6)
+                                .slice(0, visibleApplicants)
                                 .map((app, index) => (
-                                    <tr key={app._id}>
+                                    <tr key={`${app._id}-${app.refreshKey}`}>
                                         <td><span className="rank-badge">#{index + 1}</span></td>
                                         <td>
                                             <strong>{app.candidateId?.name || 'Candidate'}</strong>
@@ -357,6 +378,16 @@ const RecruiterView = () => {
                         </tbody>
                     </table>
                 )}
+                {filteredApplicants.length > visibleApplicants && (
+    <button
+        className="load-more-btn"
+        onClick={() =>
+            setVisibleApplicants((prev) => prev + 6)
+        }
+    >
+        Load More Applicants
+    </button>
+)}
             </section>
 
             {/* Active Listings Section */}

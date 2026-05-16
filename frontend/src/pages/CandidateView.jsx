@@ -48,10 +48,10 @@ const enrichJobsWithApplications = (jobList, applications = []) => {
         return {
             ...job,
 
-            applied: !!application,
+            applied: Boolean(application),
 
             applicationStatus:
-                application?.status || "pending",
+                application?.status || null,
 
             applicationId:
                 application?._id || null,
@@ -63,6 +63,12 @@ const enrichJobsWithApplications = (jobList, applications = []) => {
                             Math.max(50, job.matchScore + 8)
                         )
                     : null,
+
+                    matchedSkills:
+                        job.matchedSkills || [],
+
+                    missingSkills:
+                        job.missingSkills || []
         };
     });
 };
@@ -117,20 +123,41 @@ const fetchJobs = useCallback(async (preserveMatched = false) => {
     }
 }, [applications]);
 
-    const fetchApplications = useCallback(async () => {
-        if (!userId) return [];
+const fetchApplications = useCallback(async () => {
+    if (!userId) return [];
 
-        try {
-            const res = await API.get(`/api/jobs/my-applications/${userId}`);
-            setApplications(res.data);
-            setJobs((prevJobs) => enrichJobsWithApplications(prevJobs, res.data));
-            return res.data;
-        } catch (err) {
-            console.error("Error fetching applications:", err);
-            notify("Could not refresh applications.", "error");
-            return [];
-        }
-    }, [notify, userId]);
+    try {
+        const token = localStorage.getItem("token");
+
+        const res = await API.get(
+            `/api/jobs/my-applications/${userId}`,
+            {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            }
+        );
+
+        setApplications(res.data);
+
+        // IMPORTANT:
+        // refresh ALL jobs using latest applications
+        setAllJobs((prev) =>
+            enrichJobsWithApplications(prev, res.data)
+        );
+
+        setJobs((prev) =>
+            enrichJobsWithApplications(prev, res.data)
+        );
+
+        return res.data;
+
+    } catch (err) {
+        console.error("Error fetching applications:", err);
+        notify("Could not refresh applications.", "error");
+        return [];
+    }
+}, [notify, userId]);
 
 useEffect(() => {
     let isMounted = true;
@@ -218,7 +245,7 @@ useEffect(() => {
 
     const runSearch = async (query = searchQuery) => {
         const cleanQuery = query.trim();
-        setVisibleCount(6);
+        setVisibleCount(8);
 
         if (!cleanQuery) {
             setJobs(allJobs);
@@ -330,7 +357,7 @@ const handleResumeUpload = async () => {
         setHasMatchedResults(true);
 
         // reset visible cards count
-        setVisibleCount(6);
+        setVisibleCount(8);
 
         notify("Resume analyzed. Best matches are ranked first.");
     } catch (err) {
@@ -349,11 +376,22 @@ const handleResumeUpload = async () => {
         }
 
         try {
-            const res = await API.post("/api/jobs/apply", {
+            const token = localStorage.getItem("token");
+
+            const res = await API.post(
+                "/api/jobs/apply", 
+            {
                 jobId,
                 matchScore,
-                candidateSkills: selectedChips,
-            });
+                candidateSkills: jobs.find((job) => job._id === jobId)
+                    ?.matchedSkills || [],
+            },
+            {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            }
+        );
 
             notify(res.data.message || "Application submitted.");
             await fetchApplications();
@@ -388,50 +426,61 @@ const toggleSavedJob = (jobId) => {
         navigate("/auth");
     };
 
-    const pendingJobs = jobs.filter(
-    (job) => job.applicationStatus === "Pending"
-);
+        const pendingJobs = applications.filter(
+            (app) =>
+                String(app.status).toLowerCase() === "pending"
+        );
 
-const acceptedJobs = jobs.filter(
-    (job) => job.applicationStatus === "Accepted"
-);
+        const acceptedJobs = applications.filter(
+            (app) =>
+                String(app.status).toLowerCase() === "accepted"
+        );
 
-const rejectedJobs = jobs.filter(
-    (job) => job.applicationStatus === "Rejected"
-);
+        const rejectedJobs = applications.filter(
+            (app) =>
+                String(app.status).toLowerCase() === "rejected"
+        );
 
 const filteredJobs = useMemo(() => {
 
-    let filtered = jobs;
-
-    switch (activeTab) {
-
-        case "applications":
-            return jobs.filter(job => job.applied);
-
-        case "saved":
-            return jobs.filter(job =>
-                savedJobs.includes(job._id)
-            );
-
-        case "pending":
-            return jobs.filter(
-                job => job.applicationStatus === "Pending"
-            );
-
-        case "accepted":
-            return jobs.filter(
-                job => job.applicationStatus === "Accepted"
-            );
-
-        case "rejected":
-            return jobs.filter(
-                job => job.applicationStatus === "Rejected"
-            );
-
-        default:
-            return jobs;
+    // SAVED JOBS
+    if (activeTab === "saved") {
+        return jobs.filter((job) =>
+            savedJobs.includes(job._id)
+        );
     }
+
+    // ALL APPLIED JOBS
+    if (activeTab === "applications") {
+        return jobs.filter((job) => job.applied);
+    }
+
+    // PENDING
+    if (activeTab === "pending") {
+        return jobs.filter(
+            (job) =>
+                String(job.applicationStatus).toLowerCase() === "pending"
+        );
+    }
+
+    // ACCEPTED
+    if (activeTab === "accepted") {
+        return jobs.filter(
+            (job) =>
+                String(job.applicationStatus).toLowerCase() === "accepted"
+        );
+    }
+
+    // REJECTED
+    if (activeTab === "rejected") {
+        return jobs.filter(
+            (job) =>
+                String(job.applicationStatus).toLowerCase() === "rejected"
+        );
+    }
+
+    // DEFAULT
+    return jobs;
 
 }, [jobs, savedJobs, activeTab]);
 
@@ -477,7 +526,7 @@ const filteredJobs = useMemo(() => {
                     : "applications"
             );
 
-            setVisibleCount(6);
+            setVisibleCount(8);
         }}
     >
         <strong>{applications.length}</strong>
@@ -497,7 +546,7 @@ const filteredJobs = useMemo(() => {
                     : "saved"
             );
 
-            setVisibleCount(6);
+            setVisibleCount(8);
         }}
     >
         <strong>{savedJobs.length}</strong>
@@ -517,7 +566,7 @@ const filteredJobs = useMemo(() => {
                     : "pending"
             );
 
-            setVisibleCount(6);
+            setVisibleCount(8);
         }}
     >
         <strong>{pendingJobs.length}</strong>
@@ -537,7 +586,7 @@ const filteredJobs = useMemo(() => {
                     : "accepted"
             );
 
-            setVisibleCount(6);
+            setVisibleCount(8);
         }}
     >
         <strong>{acceptedJobs.length}</strong>
@@ -557,7 +606,7 @@ const filteredJobs = useMemo(() => {
                     : "rejected"
             );
 
-            setVisibleCount(6);
+            setVisibleCount(8);
         }}
     >
         <strong>{rejectedJobs.length}</strong>
@@ -702,7 +751,7 @@ const filteredJobs = useMemo(() => {
                         </div>
 
                         {visibleCount < filteredJobs.length && (
-                            <button className="load-more-btn" onClick={() => setVisibleCount((count) => count + 6)}>
+                            <button className="load-more-btn" onClick={() => setVisibleCount((count) => count + 8)}>
                                 Load more jobs
                             </button>
                         )}

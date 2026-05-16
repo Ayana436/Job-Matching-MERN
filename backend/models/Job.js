@@ -19,6 +19,7 @@ const jobSchema = new mongoose.Schema({
         trim: true,
         default: 'Negotiable'
     },
+    processedKeywords: [String],
     postedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
 }, { timestamps: true });
 

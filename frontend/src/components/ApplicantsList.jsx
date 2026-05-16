@@ -96,9 +96,9 @@ const filteredApplicants = applicants.filter((app) =>
                             <td style={{ padding: '15px' }}><div style={{ fontWeight: 'bold' }}>
                                 {app.candidateId?.name}</div>
                                 <div style={{ fontSize: '0.75rem', color: '#646cff', marginTop: '4px' }}>
-                                    {app.candidateSkills && app.candidateSkills.length > 0 
+                                    {app.candidateSkills && app.candidateSkills?.length > 0 
                                         ? app.candidateSkills.join(', ') 
-                                        : 'Processing skills...'}
+                                        : 'No extracted skills...'}
                                 </div>
                                 </td>
                             <td style={{ padding: '15px' }}>{app.jobId?.title}</td>

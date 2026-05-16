@@ -21,6 +21,8 @@
     "mongodb": "^7.2.0",
     "mongoose": "^9.6.1",
     "multer": "^2.1.1",
-    "pdfjs-dist": "^5.6.205"
+    "natural": "^8.1.1",
+    "pdfjs-dist": "^5.6.205",
+    "stopword": "^3.1.5"
   }
 }
