@@ -84,6 +84,7 @@ const [jobs, setJobs] = useState([]);
 const [hasMatchedResults, setHasMatchedResults] = useState(false);
     const [applications, setApplications] = useState([]);
     const [resume, setResume] = useState(null);
+    const [resumeHistory, setResumeHistory] = useState([]);
     const [loading, setLoading] = useState(false);
     const [jobsLoading, setJobsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
@@ -93,10 +94,16 @@ const [hasMatchedResults, setHasMatchedResults] = useState(false);
     const [savedJobs, setSavedJobs] = useState(() => getStoredJson("savedJobs", []));
     const [theme, setTheme] = useState(() => localStorage.getItem("theme") || "dark");
     const [activeTab, setActiveTab] = useState("all");
-    const [visibleCount, setVisibleCount] = useState(6);
+    // const [visibleCount, setVisibleCount] = useState(6);
+    const [jobsPage, setJobsPage] =useState(1);
+    const [resumeCurrentPage, setResumeCurrentPage] = useState(1);
+    const [applicationsPage, setApplicationsPage] = useState(1);
     const [toast, setToast] = useState(null);
     
 
+    const jobsPerPage = 6;
+    const resumesPerPage = 3;
+    const applicationsPerPage = 5;
     const notify = useCallback((message, type = "success") => {
         setToast({ message, type });
         window.setTimeout(() => setToast(null), 2600);
@@ -122,6 +129,32 @@ const fetchJobs = useCallback(async (preserveMatched = false) => {
         console.error("Error fetching jobs:", err);
     }
 }, [applications]);
+
+const fetchResumeHistory = useCallback(async () => {
+
+    try {
+        const token = localStorage.getItem("token");
+
+        const res = await API.get(
+            "/api/jobs/resume-history",
+            {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            }
+        );
+
+        setResumeHistory(
+            res.data.history || []
+        );
+    } catch (err) {
+        console.error(
+            "Resume history fetch failed:",
+            err
+        );
+    }
+}, []);
+
 
 const fetchApplications = useCallback(async () => {
     if (!userId) return [];
@@ -204,6 +237,9 @@ setJobs(enrichedJobs);
     };
 
     loadInitialData();
+
+    fetchResumeHistory();
+
     console.log("iFR")
 
     return () => {
@@ -220,7 +256,7 @@ useEffect(() => {
 
         fetchApplications();
 
-    }, 2000);
+    }, 5000);
 
     return () => clearInterval(interval);
 
@@ -245,7 +281,7 @@ useEffect(() => {
 
     const runSearch = async (query = searchQuery) => {
         const cleanQuery = query.trim();
-        setVisibleCount(8);
+        // setVisibleCount(8);
 
         if (!cleanQuery) {
             setJobs(allJobs);
@@ -342,7 +378,18 @@ const handleResumeUpload = async () => {
     try {
         setLoading(true);
 
-        const res = await API.post("/api/jobs/match-pdf", formData);
+        const token = localStorage.getItem("token");
+
+        const res = await API.post(
+    "/api/jobs/match-pdf",
+    formData,
+    {
+        headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "multipart/form-data",
+        },
+    }
+);
         console.log(res.data);
 
         const matchedJobs = enrichJobsWithApplications(
@@ -350,14 +397,18 @@ const handleResumeUpload = async () => {
             applications
         );
 
+        console.log("Matched jobs after upload:", matchedJobs);
+
         // ONLY update displayed jobs
         setJobs([...matchedJobs]);
 
         // keep track that AI matched results are active
         setHasMatchedResults(true);
 
+        await fetchResumeHistory();
+
         // reset visible cards count
-        setVisibleCount(8);
+        // setVisibleCount(8);
 
         notify("Resume analyzed. Best matches are ranked first.");
     } catch (err) {
@@ -443,55 +494,127 @@ const toggleSavedJob = (jobId) => {
 
 const filteredJobs = useMemo(() => {
 
+    let filtered = [...jobs];
+
     // SAVED JOBS
     if (activeTab === "saved") {
-        return jobs.filter((job) =>
-            savedJobs.includes(job._id)
+        filtered = filtered.filter(
+            (job) =>
+                savedJobs.includes(job._id)
         );
     }
 
     // ALL APPLIED JOBS
     if (activeTab === "applications") {
-        return jobs.filter((job) => job.applied);
+        filtered = filtered.filter(
+            (job) => job.applied
+        );
     }
 
     // PENDING
     if (activeTab === "pending") {
-        return jobs.filter(
+        filtered = filtered.filter(
             (job) =>
-                String(job.applicationStatus).toLowerCase() === "pending"
+                String(
+                job.applicationStatus).toLowerCase() === "pending"
         );
+    
     }
 
     // ACCEPTED
     if (activeTab === "accepted") {
-        return jobs.filter(
+        filtered = filtered.filter(
             (job) =>
-                String(job.applicationStatus).toLowerCase() === "accepted"
+                String(
+                    job.applicationStatus).toLowerCase() === "accepted"
         );
     }
 
     // REJECTED
     if (activeTab === "rejected") {
-        return jobs.filter(
+        filtered = filtered.filter(
             (job) =>
-                String(job.applicationStatus).toLowerCase() === "rejected"
+                String(job.applicationStatus
+                ).toLowerCase() === "rejected"
         );
     }
 
     // DEFAULT
-    return jobs;
+    return filtered;
 
 }, [jobs, savedJobs, activeTab]);
 
     // return filtered;
 
 // }, [jobs, savedJobs, showSavedOnly, applicationFilter]);
-    const visibleJobs = useMemo(() => filteredJobs.slice(0, visibleCount), [filteredJobs, visibleCount]);
+    // const visibleJobs = useMemo(() => filteredJobs.slice(0, visibleCount), [filteredJobs, visibleCount]);
     const acceptedCount = applications.filter((app) => app.status === "Accepted").length;
     const averageMatch = jobs.length
         ? Math.round(jobs.reduce((sum, job) => sum + (job.matchScore || 0), 0) / jobs.length)
         : 0;
+
+// RESUME HISTORY PAGINATION
+const totalResumePages = Math.ceil(
+    resumeHistory.length / resumesPerPage
+);
+
+const resumeStartIndex =
+    (resumeCurrentPage - 1) * resumesPerPage;
+
+const paginatedResumeHistory =
+    resumeHistory
+        .slice()
+        .reverse()
+        .slice(
+            resumeStartIndex,
+            resumeStartIndex + resumesPerPage
+        );
+
+// Applied JOBS PAGINATION
+const totalApplicationPages = Math.ceil(
+    applications.length / applicationsPerPage
+);
+
+const applicationStartIndex =
+    (applicationsPage - 1) * applicationsPerPage;
+
+const paginatedApplications =
+    applications.slice(
+        applicationStartIndex,
+        applicationStartIndex + applicationsPerPage
+    );
+
+    const totalJobPages = Math.ceil(
+    filteredJobs.length / jobsPerPage
+);
+
+const jobsStartIndex =
+    (jobsPage - 1) * jobsPerPage;
+
+const visibleJobs =
+    filteredJobs.slice(
+        jobsStartIndex,
+        jobsStartIndex + jobsPerPage
+    );
+
+const getResumeUrl = (filePath) => {
+
+    if (!filePath) return "";
+
+    let cleanedPath = filePath
+        .replaceAll("\\", "/")
+        .trim();
+
+    cleanedPath = cleanedPath.replace(/^\/+/, "");
+
+    if (!cleanedPath.startsWith("uploads/")) {
+
+        cleanedPath =
+            `uploads/${cleanedPath.replace("uploads", "")}`;
+    }
+
+    return `http://localhost:5000/${cleanedPath}`;
+};
 
     return (
         <div className={`candidate-page ${theme === "light" ? "light-mode" : ""}`}>
@@ -526,7 +649,7 @@ const filteredJobs = useMemo(() => {
                     : "applications"
             );
 
-            setVisibleCount(8);
+            // setVisibleCount(8);
         }}
     >
         <strong>{applications.length}</strong>
@@ -546,7 +669,7 @@ const filteredJobs = useMemo(() => {
                     : "saved"
             );
 
-            setVisibleCount(8);
+            // setVisibleCount(8);
         }}
     >
         <strong>{savedJobs.length}</strong>
@@ -566,7 +689,7 @@ const filteredJobs = useMemo(() => {
                     : "pending"
             );
 
-            setVisibleCount(8);
+            // setVisibleCount(8);
         }}
     >
         <strong>{pendingJobs.length}</strong>
@@ -586,7 +709,7 @@ const filteredJobs = useMemo(() => {
                     : "accepted"
             );
 
-            setVisibleCount(8);
+            // setVisibleCount(8);
         }}
     >
         <strong>{acceptedJobs.length}</strong>
@@ -606,7 +729,7 @@ const filteredJobs = useMemo(() => {
                     : "rejected"
             );
 
-            setVisibleCount(8);
+            // setVisibleCount(8);
         }}
     >
         <strong>{rejectedJobs.length}</strong>
@@ -693,6 +816,169 @@ const filteredJobs = useMemo(() => {
                 </div>
             </section>
 
+<section className="resume-history-panel">
+
+    <div className="section-title-row">
+        <h2>Resume History</h2>
+
+        <span>
+            {resumeHistory.length} uploads
+        </span>
+    </div>
+
+    {resumeHistory.length === 0 ? (
+
+        <p className="empty-state">
+            No resumes uploaded yet.
+        </p>
+
+    ) : (
+
+        <>
+            <div className="resume-history-list">
+
+                {paginatedResumeHistory.map(
+                    (resumeItem, index) => {
+
+                    const resumeUrl =
+                        resumeItem.filePath
+                            ?.replaceAll("\\", "/");
+
+                    return (
+
+                        <div
+                            key={index}
+                            className="resume-history-card"
+                        >
+
+                            <div>
+                                <strong>
+                                    {resumeItem.fileName}
+                                </strong>
+
+                                <p>
+                                    Uploaded on{" "}
+                                    {resumeItem.uploadedAt
+                                        ? new Date(
+                                            resumeItem.uploadedAt
+                                        ).toLocaleString()
+                                        : "Recently uploaded"}
+                                </p>
+                            </div>
+
+{resumeItem?.filePath ? (
+
+    <div
+        style={{
+            display: "flex",
+            gap: "10px",
+            marginTop: "10px"
+        }}
+    >
+
+        <button
+            onClick={() => {
+
+                window.open(
+                    getResumeUrl(
+                        resumeItem.filePath
+                    ),
+                    "_blank"
+                );
+
+            }}
+            style={{
+                background: "#1e293b",
+                color: "white",
+                border: "1px solid #334155",
+                padding: "6px 12px",
+                borderRadius: "6px",
+                cursor: "pointer"
+            }}
+        >
+            View Resume
+        </button>
+
+        <button
+            onClick={() => {
+
+                const link =
+                    document.createElement("a");
+
+                link.href =
+                    getResumeUrl(
+                        resumeItem.filePath
+                    );
+
+                link.download =
+                    resumeItem.fileName ||
+                    "resume.pdf";
+
+                document.body.appendChild(link);
+
+                link.click();
+
+                document.body.removeChild(link);
+
+            }}
+            style={{
+                background: "#4caf5022",
+                color: "#4caf50",
+                border: "1px solid #4caf50",
+                padding: "6px 12px",
+                borderRadius: "6px",
+                cursor: "pointer"
+            }}
+        >
+            Download Resume
+        </button>
+
+    </div>
+
+) : (
+
+    <span style={{ color: "#888" }}>
+        No Resume
+    </span>
+
+)}
+                        </div>
+                    );
+                })}
+            </div>
+
+            <div className="pagination-controls">
+
+                <button
+                    disabled={resumeCurrentPage === 1}
+                    onClick={() =>
+                        setResumeCurrentPage(prev => prev - 1)
+                    }
+                >
+                    ← Previous
+                </button>
+
+                <span>
+                    Page {resumeCurrentPage} of{" "}
+                    {totalResumePages || 1}
+                </span>
+
+                <button
+                    disabled={
+                        resumeCurrentPage >= totalResumePages
+                    }
+                    onClick={() =>
+                        setResumeCurrentPage(prev => prev + 1)
+                    }
+                >
+                    Next →
+                </button>
+
+            </div>
+        </>
+    )}
+</section>
+
             <section>
                 <div className="section-title-row">
                     <h2>
@@ -737,24 +1023,54 @@ const filteredJobs = useMemo(() => {
 </p>
                 ) : (
                     <>
-                        <div className="results-grid">
-                            {visibleJobs.map((job) => (
-                                <JobCard
-                                    key={job._id}
-                                    job={job}
-                                    onApply={handleApply}
-                                    isSaved={savedJobs.includes(job._id)}
-                                    onToggleSave={toggleSavedJob}
-                                    applicationStatus={job.applicationStatus}
-                                />
-                            ))}
-                        </div>
+    <div className="results-grid">
 
-                        {visibleCount < filteredJobs.length && (
+        {visibleJobs.map((job) => (
+
+            <JobCard
+                key={job._id}
+                job={job}
+                onApply={handleApply}
+                isSaved={savedJobs.includes(job._id)}
+                onToggleSave={toggleSavedJob}
+                applicationStatus={job.applicationStatus}
+            />
+
+        ))}
+
+    </div>
+
+    <div className="pagination-controls">
+
+        <button
+            disabled={jobsPage === 1}
+            onClick={() =>
+                setJobsPage(prev => prev - 1)
+            }
+        >
+            ← Previous
+        </button>
+
+        <span>
+            Page {jobsPage} of{" "}
+            {totalJobPages || 1}
+        </span>
+
+        <button
+            disabled={jobsPage >= totalJobPages}
+            onClick={() =>
+                setJobsPage(prev => prev + 1)
+            }
+        >
+            Next →
+        </button>
+
+    </div>
+                        {/* {visibleCount < filteredJobs.length && (
                             <button className="load-more-btn" onClick={() => setVisibleCount((count) => count + 8)}>
                                 Load more jobs
                             </button>
-                        )}
+                        )} */}
                     </>
                 )}
             </section>

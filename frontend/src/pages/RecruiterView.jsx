@@ -77,7 +77,7 @@ useEffect(() => {
         fetchAdminJobs();
         fetchApplicants();
 
-    }, 1000);
+    }, 15000);
 
     return () => clearInterval(interval);
 
@@ -192,6 +192,36 @@ useEffect(() => {
             notify("Delete failed.", "error");
         }
     };
+
+const getResumeUrl = (filePath) => {
+
+    if (!filePath) return "";
+
+    let cleanedPath = filePath
+        .replaceAll("\\", "/")
+        .trim();
+
+    // remove leading slashes
+    cleanedPath = cleanedPath.replace(/^\/+/, "");
+
+    // fix malformed uploads path
+    if (cleanedPath.startsWith("uploads")) {
+
+        cleanedPath = cleanedPath.replace(
+            /^uploads/,
+            "uploads/"
+        );
+    }
+
+    // ensure uploads exists
+    if (!cleanedPath.startsWith("uploads/")) {
+
+        cleanedPath = `uploads/${cleanedPath}`;
+    }
+
+    return `http://localhost:5000/${cleanedPath}`;
+};
+    console.log(applicants);
 
     return (
         <div className="recruiter-container">
@@ -367,12 +397,12 @@ useEffect(() => {
                                 <th>Role</th>
                                 <th>Match</th>
                                 <th>Status</th>
+                                <th style={{textAlign:'center'}}>Resume Action</th>
                             </tr>
                         </thead>
                         <tbody>
                             {[...paginatedApplicants]
                                 .sort((a, b) => (b.matchScore || 0) - (a.matchScore || 0))
-                                .slice(0, visibleApplicants)
                                 .map((app, index) => (
                                     <tr key={`${app._id}-${app.refreshKey}`}>
                                         <td><span className="rank-badge">#{index + 1}</span></td>
@@ -388,6 +418,74 @@ useEffect(() => {
                                             </div>
                                         </td>
                                         <td><span className={`ranking-status ${String(app.status).toLowerCase()}`}>{app.status}</span></td>
+<td>
+
+{app.candidateId?.resume?.filePath ? (
+
+    <div
+        style={{
+            display: "flex",
+            gap: "10px",
+            justifyContent: "center"
+        }}
+    >
+
+        <button
+            onClick={() => {
+
+    window.open(
+        getResumeUrl(app.candidateId.resume.filePath),
+        "_blank"
+    );
+
+}}
+            style={{
+                background: "#1e293b",
+                color: "white",
+                border: "1px solid #334155",
+                padding: "6px 12px",
+                borderRadius: "6px",
+                cursor: "pointer"
+            }}
+        >
+            View
+        </button>
+
+        <button
+            onClick={() => {
+
+    const link = document.createElement("a");
+
+    link.href = getResumeUrl(
+        app.candidateId.resume.filePath
+    );
+
+    link.download =
+        app.candidateId.resume.fileName ||
+        "resume.pdf";
+
+    document.body.appendChild(link);
+
+    link.click();
+
+    document.body.removeChild(link);
+
+}}
+        >
+            Download
+        </button>
+
+    </div>
+
+) : (
+
+    <span style={{ color: "#888" }}>
+        No Resume
+    </span>
+
+)}
+
+</td>
                                     </tr>
                                 ))}
                         </tbody>
@@ -419,16 +517,7 @@ useEffect(() => {
     </button>
 
 </div>
-                {filteredApplicants.length > visibleApplicants && (
-    <button
-        className="load-more-btn"
-        onClick={() =>
-            setVisibleApplicants((prev) => prev + 6)
-        }
-    >
-        Load More Applicants
-    </button>
-)}
+
             </section>
 
             {/* Active Listings Section */}

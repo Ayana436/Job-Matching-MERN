@@ -1988,3 +1988,35 @@ box-shadow: 0 0 20px rgba(202, 204, 228, 0.153);
     margin-bottom:8px;
     color:#8ea2ff;
 }
+
+/* RESUME HISTORY UI */
+.resume-history-panel{
+    margin-top:24px;
+}
+
+.resume-history-list{
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+}
+
+.resume-history-card{
+    background:rgba(255,255,255,0.04);
+    border:1px solid rgba(255,255,255,0.08);
+    border-radius:14px;
+    padding:14px;
+    display: flex;
+    justify-content: space-between;
+}
+.resume-history-actions a{
+    text-decoration: none;
+    padding: 10px;
+    margin: 5px;
+    border: none;
+    border-radius: 0%;
+
+}
+.resume-history-actions{
+    margin-top: 20px;
+    
+}

@@ -18,13 +18,13 @@ const handleSubmit = async (e) => {
 
     const payload = isLogin
         ? {
-              email: formData.email,
-              password: formData.password,
-          }
-        : {
-              ...formData,
-              role,
-          };
+                email: formData.email,
+                password: formData.password,
+            }
+            : {
+                ...formData,
+                role,
+            };
 
     try {
         const res = await API.post(endpoint, payload);

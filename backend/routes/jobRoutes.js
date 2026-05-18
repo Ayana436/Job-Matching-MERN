@@ -2,8 +2,10 @@ import express from 'express';
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+import User from '../models/User.js'
 import Job from '../models/Job.js';
 import Application from '../models/Application.js';
+import ResumeHistory from '../models/ResumeHistory.js';
 import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs';
 import { calculateSimilarity, preprocessText } from '../utils/nlpUtils.js';
 import { authorize, protect } from '../middleware/authMiddleware.js';
@@ -168,10 +170,10 @@ router.post('/match-pdf', protect, authorize('candidate'), upload.single('resume
         const allJobs = await Job.find().lean();
         const matches = allJobs.map(job => {
 
-    const requiredSkills = job.requiredSkills || [];
+        const requiredSkills = job.requiredSkills || [];
 
     // keyword skill matching
-    const matchedSkills = requiredSkills.filter(skill => {
+        const matchedSkills = requiredSkills.filter(skill => {
 
         const safeSkill = escapeRegExp(skill);
 
@@ -183,13 +185,13 @@ router.post('/match-pdf', protect, authorize('candidate'), upload.single('resume
         return regex.test(resumeText);
     });
 
-    const missingSkills =
+        const missingSkills =
         requiredSkills.filter(
             skill => !matchedSkills.includes(skill)
         );
 
     // combine job fields into NLP text
-    const jobContent = `
+        const jobContent = `
         ${job.title}
         ${job.description}
         ${requiredSkills.join(" ")}
@@ -199,14 +201,14 @@ router.post('/match-pdf', protect, authorize('candidate'), upload.single('resume
     `;
 
     // TF-IDF cosine similarity
-    const similarityScore =
+        const similarityScore =
         calculateSimilarity(
             resumeText,
             jobContent
         );
 
     // weighted hybrid AI score
-    const skillScore =
+        const skillScore =
         requiredSkills.length > 0
             ? Math.round(
                 (matchedSkills.length /
@@ -215,7 +217,7 @@ router.post('/match-pdf', protect, authorize('candidate'), upload.single('resume
             : 0;
 
     // final AI score
-    const finalScore = Math.round(
+        const finalScore = Math.round(
         (skillScore * 0.6) +
         (similarityScore * 0.4)
     );
@@ -261,16 +263,61 @@ router.post('/match-pdf', protect, authorize('candidate'), upload.single('resume
 
         // 3. (Optional) Delete the file after processing to save space
         // fs.unlinkSync(req.file.path); 
+        // saves latest resume, stores upload history, attaches resume to user profile
+await User.findByIdAndUpdate(
+    req.user.id,
+    {
+        resume: {
+            fileName: req.file.originalname,
+            filePath: `/uploads${req.file.filename}`,
+            uploadedAt: new Date()
+        },
 
-        const sortedMatches = matches
-            .filter(m => m.matchScore > 0)
-            .sort((a, b) => b.matchScore - a.matchScore);
+        $push: {
+            resumeHistory: {
+                fileName: req.file.originalname,
+                filePath: `/uploads${req.file.filename}`,
+                uploadedAt: new Date()
+            }
+        }
+    },
+    { new: true }
+);
 
-        res.status(200).json(sortedMatches);
+
+const sortedMatches = matches
+    .filter(m => m.matchScore > 0)
+    .sort((a, b) => b.matchScore - a.matchScore);
+
+
+// SAVE RESUME HISTORY
+const extractedSkills = [
+    ...new Set(
+        sortedMatches.flatMap(
+            job => job.matchedSkills || []
+        )
+    )
+];
+
+await ResumeHistory.create({
+    candidateId: req.user.id,
+    fileName: req.file.originalname,
+    filePath: `/uploads/${req.file.filename}`,
+    uploadedAt: new Date(),
+    extractedSkills,
+    topMatchScore:
+        sortedMatches[0]?.matchScore || 0,
+    totalMatches: sortedMatches.length
+});
+
+res.status(200).json(sortedMatches);
+
     } catch (err) {
         console.error("PDF Parsing Error:", err);
         // Clean up file even if parsing fails
-        if (req.file) fs.unlinkSync(req.file.path);
+        if (req.file && fs.unlinkSync(req.file.path)){
+            fs.unlinkSync(req.file.path);
+        }
         res.status(500).json({ error: "Server failed to process PDF" });
     }
 });
@@ -347,6 +394,39 @@ router.post('/apply', protect, authorize('candidate'), async (req, res) => {
     }
 }});
 
+// Creates resume history API
+router.get(
+    '/resume-history',
+    protect,
+    authorize('candidate'),
+    async (req, res) => {
+        try {
+
+            const history = await ResumeHistory.find({
+                candidateId: req.user.id
+            }).sort({ createdAt: -1 });
+
+            res.status(200).json({
+                history
+            });
+
+        } catch (err) {
+
+            console.error(
+                'Resume history error:',
+                err
+            );
+
+            res.status(500).json({
+                error:
+                    'Failed to fetch resume history'
+            });
+        }
+    }
+);
+
+
+
 // --- GET applications for a specific candidate ---
 router.get('/my-applications/:candidateId', protect, async (req, res) => {
     try {
@@ -355,7 +435,11 @@ router.get('/my-applications/:candidateId', protect, async (req, res) => {
             return res.status(403).json({ error: "You can only view your own applications" });
         }
 
-        const applications = await Application.find({ candidateId })
+        const applications = await Application.find()
+            .populate({
+                path: "candidateId",
+                select: "name email resume"
+            })
             .populate('jobId', 'title location company workMode') 
             .sort({ createdAt: -1 }); // Show newest first
             
@@ -370,7 +454,7 @@ router.get('/applicants', protect, authorize('recruiter'), async (req, res) => {
     try {
         const apps = await Application.find()
             .populate('jobId', 'title location')
-            .populate('candidateId', 'name email')
+            .populate('candidateId', 'name email resume resumeHistory')
             .sort({ createdAt: -1 });
             res.set({
                 "Cache-Control":"no-cache",
@@ -409,5 +493,42 @@ router.patch('/applicants/:id', protect, authorize('recruiter'), async (req, res
         res.status(500).json({ error: "Server failed to update status" });
     }
 });
+
+// DOWNLOAD RESUME
+router.get(
+    '/download-resume/:filename',
+    protect,
+    async (req, res) => {
+        try {
+
+            const filePath = path.join(
+                process.cwd(),
+                'uploads',
+                req.params.filename
+            );
+
+            // check file exists
+            if (!fs.existsSync(filePath)) {
+                return res.status(404).json({
+                    error: 'Resume not found'
+                });
+            }
+
+            // force download
+            res.download(filePath);
+
+        } catch (err) {
+
+            console.error(
+                'Download resume error:',
+                err
+            );
+
+            res.status(500).json({
+                error: 'Failed to download resume'
+            });
+        }
+    }
+);
 
 export default router;

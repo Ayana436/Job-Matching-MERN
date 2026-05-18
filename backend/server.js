@@ -27,8 +27,7 @@ app.use(cors());
 app.use(express.json());
 app.use(requestLogger);
 
-// Upload folder static access
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 
 // DEBUG LOGS
 console.log('--- System Diagnostics ---');
@@ -84,7 +83,7 @@ const connectDB = async () => {
 };
 
 connectDB();
-setInterval(connectDB, 30000);
+setInterval(connectDB, 10000);
 
 app.use((req, res, next) => {
     if (req.path === '/' || req.path === '/api/health') return next();
@@ -101,6 +100,10 @@ app.use((req, res, next) => {
 // ROUTES
 app.use('/api/auth', authRoutes);
 app.use('/api/jobs', jobRoutes);
+
+
+// Upload folder static access
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 app.use(notFound);
 app.use(errorHandler);

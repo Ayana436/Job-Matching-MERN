@@ -41,7 +41,7 @@ useEffect(() => {
             console.error("Auto refresh failed:", err);
         });
 
-    }, 1000);
+    }, 15000);
 
     return () => clearInterval(interval);
 
@@ -49,7 +49,8 @@ useEffect(() => {
 
 const handleStatusUpdate = async (applicationId, newStatus) => {
     try {
-        await API.patch(`/api/jobs/applicants/${applicationId}`, {
+        await API
+        atch(`/api/jobs/applicants/${applicationId}`, {
             status: newStatus 
         });
         
@@ -122,6 +123,7 @@ const paginatedApplicants =
                         <th style={{ padding: '15px' }}>Candidate</th>
                         <th style={{ padding: '15px' }}>Role</th>
                         <th style={{ padding: '15px' }}>Match</th>
+                        <th style={{ padding: '15px', textAlign:'center' }}>Resume</th>
                         <th style={{ padding: '15px' }}>Status</th>
                         <th style={{ padding: '15px' }}>Action</th>
                     </tr>
@@ -141,6 +143,87 @@ const paginatedApplicants =
                             <td style={{ padding: '15px', fontWeight: 'bold', color: '#6366f1' }}>
                                 {app.matchScore}%
                             </td>
+                            <td style={{ padding: '15px'}}>
+
+{app.candidateId?.resume?.filePath ? (
+
+    <div
+        style={{
+            display: "flex",
+            gap: "10px"
+        }}
+    >
+
+        <button
+            onClick={() => {
+
+                const resumeUrl =
+                    app.candidateId.resume.filePath
+                        .replaceAll("\\", "/");
+
+                window.open(
+                    `http://localhost:5000/${resumeUrl}`,
+                    "_blank"
+                );
+            }}
+            style={{
+                background: "#1e293b",
+                color: "white",
+                border: "1px solid #334155",
+                padding: "6px 12px",
+                borderRadius: "6px",
+                cursor: "pointer"
+            }}
+        >
+            View
+        </button>
+
+        <button
+            onClick={() => {
+
+                const resumeUrl =
+                    app.candidateId.resume.filePath
+                        .replaceAll("\\", "/");
+
+                const link =
+                    document.createElement("a");
+
+                link.href =
+                    `http://localhost:5000/${resumeUrl}`;
+
+                link.download =
+                    app.candidateId.resume.fileName ||
+                    "resume.pdf";
+
+                document.body.appendChild(link);
+
+                link.click();
+
+                document.body.removeChild(link);
+            }}
+            style={{
+                background: "#4caf5022",
+                color: "#4caf50",
+                border: "1px solid #4caf50",
+                padding: "6px 12px",
+                borderRadius: "6px",
+                cursor: "pointer"
+            }}
+        >
+            Download
+        </button>
+
+    </div>
+
+) : (
+
+    <span style={{ color: "#888" }}>
+        No Resume
+    </span>
+
+)}
+
+</td>
                             <td style={{ padding: '15px' }}>{app.status}</td>
                             <td>
                                 <div style={{ display: 'flex', gap: '10px' }}>

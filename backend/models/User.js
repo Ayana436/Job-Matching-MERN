@@ -9,9 +9,19 @@ const userSchema = new mongoose.Schema({
         enum: ['candidate', 'recruiter'], 
         default: 'candidate' 
     },
+    resume: {
+        fileName: String,
+        filePath: String,
+        uploadedAt: Date
+    },
+    resumeHistory: [{
+        fileName: String,
+        filePath: String,
+        uploadedAt:Date
+    }],
     resumePath: { type: String }, // Stores the path from Multer for Quick Apply
     appliedJobs: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Job' }]
 }, { timestamps: true });
 
 const User = mongoose.model('User', userSchema);
-export default User;
+export default User; 
