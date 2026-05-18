@@ -125,6 +125,7 @@ const paginatedApplicants =
                         <th style={{ padding: '15px' }}>Match</th>
                         <th style={{ padding: '15px', textAlign:'center' }}>Resume</th>
                         <th style={{ padding: '15px' }}>Status</th>
+                        <th style={{ padding: '15px' }}>AI Recommendation</th>
                         <th style={{ padding: '15px' }}>Action</th>
                     </tr>
                 </thead>
@@ -224,7 +225,57 @@ const paginatedApplicants =
 )}
 
 </td>
-                            <td style={{ padding: '15px' }}>{app.status}</td>
+                            <td style={{ padding: '15px' }}>
+    {app.status}
+</td>
+
+<td style={{ padding: '15px' }}>
+
+    <div
+        style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "6px"
+        }}
+    >
+
+        <span
+            style={{
+                background:
+                    `${app.recommendationColor || "#64748b"}22`,
+
+                color:
+                    app.recommendationColor || "#64748b",
+
+                border:
+                    `1px solid ${app.recommendationColor || "#64748b"}`,
+
+                padding: "6px 10px",
+
+                borderRadius: "999px",
+
+                fontSize: "0.75rem",
+
+                fontWeight: "bold",
+
+                width: "fit-content"
+            }}
+        >
+            {app.aiRecommendation || "Pending"}
+        </span>
+
+        <small
+            style={{
+                color: "#94a3b8",
+                lineHeight: "1.4"
+            }}
+        >
+            {app.aiInsight || "No AI insight yet"}
+        </small>
+
+    </div>
+
+</td>
                             <td>
                                 <div style={{ display: 'flex', gap: '10px' }}>
                                     <button className="approve-btn" onClick={() => handleStatusUpdate(app._id, 'accepted')}style={{ background: '#4caf5022', color: '#4caf50', border: '1px solid #4caf50', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>

@@ -450,24 +450,134 @@ router.get('/my-applications/:candidateId', protect, async (req, res) => {
 });
 
 // Pulls Score to send Recruiter
-router.get('/applicants', protect, authorize('recruiter'), async (req, res) => {
-    try {
-        const apps = await Application.find()
-            .populate('jobId', 'title location')
-            .populate('candidateId', 'name email resume resumeHistory')
-            .sort({ createdAt: -1 });
+router.get(
+    '/applicants',
+    protect,
+    authorize('recruiter'),
+
+    async (req, res) => {
+
+        try {
+
+            const apps = await Application.find()
+
+                .populate(
+                    'jobId',
+                    'title location requiredSkills'
+                )
+
+                .populate(
+                    'candidateId',
+                    'name email resume resumeHistory'
+                )
+
+                .sort({ createdAt: -1 });
+
+            // ADD AI RECOMMENDATION ENGINE
+            const processedApps = apps.map((app) => {
+
+                const score =
+                    app.matchScore || 0;
+
+                let aiRecommendation = "";
+                let recommendationColor = "";
+                let aiInsight = "";
+
+                // ELITE
+                if (score >= 85) {
+
+                    aiRecommendation =
+                        "Highly Recommended";
+
+                    recommendationColor =
+                        "#22c55e";
+
+                    aiInsight =
+                        "Excellent skill alignment and strong ATS compatibility.";
+
+                }
+
+                // GOOD
+                else if (score >= 70) {
+
+                    aiRecommendation =
+                        "Recommended";
+
+                    recommendationColor =
+                        "#3b82f6";
+
+                    aiInsight =
+                        "Good technical alignment with relevant profile strength.";
+
+                }
+
+                // AVERAGE
+                else if (score >= 50) {
+
+                    aiRecommendation =
+                        "Consider";
+
+                    recommendationColor =
+                        "#f59e0b";
+
+                    aiInsight =
+                        "Moderate relevance. Candidate may fit selective requirements.";
+
+                }
+
+                // LOW
+                else {
+
+                    aiRecommendation =
+                        "Low Match";
+
+                    recommendationColor =
+                        "#ef4444";
+
+                    aiInsight =
+                        "Limited matching skills for current role requirements.";
+
+                }
+
+                return {
+
+                    ...app.toObject(),
+
+                    aiRecommendation,
+
+                    recommendationColor,
+
+                    aiInsight
+                };
+
+            });
+
             res.set({
-                "Cache-Control":"no-cache",
+                "Cache-Control": "no-cache",
                 Pragma: "no-cache",
                 Expires: "0"
             });
-             // Sort by highest score by default || new entries
-        res.status(200).json(apps);
-    } catch (err) {
-        res.status(500).json({ error: "Failed to fetch applicants" });
-    }
-});
 
+            res.status(200).json(
+                processedApps
+            );
+
+        } catch (err) {
+
+            console.error(
+                "Applicants fetch error:",
+                err
+            );
+
+            res.status(500).json({
+                error:
+                    "Failed to fetch applicants"
+            });
+
+        }
+
+    }
+);
 // GET all applicants (Recruiter Only)
 
 // Route to update application status (Approve/Reject)

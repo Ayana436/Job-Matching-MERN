@@ -725,6 +725,7 @@ const getResumeUrl = (filePath) => {
                                 <th>Role</th>
                                 <th>Match</th>
                                 <th>Status</th>
+                                <th>AI Recommendation</th>
                                 <th style={{textAlign:'center'}}>Resume Action</th>
                             </tr>
                         </thead>
@@ -745,7 +746,56 @@ const getResumeUrl = (filePath) => {
                                                 <span><i style={{ width: `${Math.min(app.matchScore || 0, 100)}%` }} /></span>
                                             </div>
                                         </td>
-                                        <td><span className={`ranking-status ${String(app.status).toLowerCase()}`}>{app.status}</span></td>
+                                        <td>
+    <span className={`ranking-status ${String(app.status).toLowerCase()}`}>
+        {app.status}
+    </span>
+</td>
+
+<td>
+
+    <div
+        style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "6px"
+        }}
+    >
+
+        <span
+            style={{
+                background:
+                    app.recommendationColor || "#334155",
+
+                color: "white",
+
+                padding: "6px 10px",
+
+                borderRadius: "999px",
+
+                fontSize: "12px",
+
+                fontWeight: "bold",
+
+                width: "fit-content"
+            }}
+        >
+            {app.aiRecommendation || "Pending"}
+        </span>
+
+        <small
+            style={{
+                color: "#cbd5e1",
+                lineHeight: "1.4"
+            }}
+        >
+            {app.aiInsight || "No AI insight"}
+        </small>
+
+    </div>
+
+</td>
+
 <td>
 
 {app.candidateId?.resume?.filePath ? (
