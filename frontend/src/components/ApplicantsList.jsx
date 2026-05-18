@@ -50,8 +50,8 @@ useEffect(() => {
 const handleStatusUpdate = async (applicationId, newStatus) => {
     try {
         await API
-        atch(`/api/jobs/applicants/${applicationId}`, {
-            status: newStatus 
+        patch(`/api/jobs/applicants/${applicationId}`, {
+            status: newStatus.toLowerCase()
         });
         
         // ✨ MANUAL UI UPDATE:
@@ -227,10 +227,10 @@ const paginatedApplicants =
                             <td style={{ padding: '15px' }}>{app.status}</td>
                             <td>
                                 <div style={{ display: 'flex', gap: '10px' }}>
-                                    <button className="approve-btn" onClick={() => handleStatusUpdate(app._id, 'Accepted')}style={{ background: '#4caf5022', color: '#4caf50', border: '1px solid #4caf50', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>
+                                    <button className="approve-btn" onClick={() => handleStatusUpdate(app._id, 'accepted')}style={{ background: '#4caf5022', color: '#4caf50', border: '1px solid #4caf50', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>
                                         Approve
                                     </button>
-                                    <button className="reject-btn" onClick={() => handleStatusUpdate(app._id, 'Rejected')}style={{ background: '#f4433622', color: '#f44336', border: '1px solid #f44336', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>
+                                    <button className="reject-btn" onClick={() => handleStatusUpdate(app._id, 'rejected')}style={{ background: '#f4433622', color: '#f44336', border: '1px solid #f44336', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>
                                         Reject
                                     </button>
                                 </div>

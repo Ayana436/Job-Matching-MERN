@@ -548,7 +548,7 @@ const filteredJobs = useMemo(() => {
 
 // }, [jobs, savedJobs, showSavedOnly, applicationFilter]);
     // const visibleJobs = useMemo(() => filteredJobs.slice(0, visibleCount), [filteredJobs, visibleCount]);
-    const acceptedCount = applications.filter((app) => app.status === "Accepted").length;
+    const acceptedCount = applications.filter((app) => String(app.status).toLowerCase() === "accepted").length;
     const averageMatch = jobs.length
         ? Math.round(jobs.reduce((sum, job) => sum + (job.matchScore || 0), 0) / jobs.length)
         : 0;

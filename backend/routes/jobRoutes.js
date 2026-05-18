@@ -269,14 +269,14 @@ await User.findByIdAndUpdate(
     {
         resume: {
             fileName: req.file.originalname,
-            filePath: `/uploads${req.file.filename}`,
+            filePath: `/uploads/${req.file.filename}`,
             uploadedAt: new Date()
         },
 
         $push: {
             resumeHistory: {
                 fileName: req.file.originalname,
-                filePath: `/uploads${req.file.filename}`,
+                filePath: `/uploads/${req.file.filename}`,
                 uploadedAt: new Date()
             }
         }

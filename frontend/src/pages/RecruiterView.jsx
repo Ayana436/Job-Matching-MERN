@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { BarChart, Bar, PieChart, Pie, Cell, Tooltip, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Legend } from 'recharts';
 import API from '../api';
 
 
@@ -15,9 +16,14 @@ const RecruiterView = () => {
     const [editingId, setEditingId] = useState(null);
     const [toast, setToast] = useState(null);
     const [activeRecruiterTab, setActiveRecruiterTab] = useState("all");
+    const [searchTerm, setSearchTerm] = useState("");
+    const [chartFilter, setChartFilter] = useState(null);
+    const [skillFilter, setSkillFilter] = useState(null);
     const [currentPage, setCurrentPage] = useState(1);
     const applicantsPerPage = 8;
     const token = localStorage.getItem('token');
+
+    
 
     const notify = (message, type = 'success') => {
         setToast({ message, type });
@@ -104,40 +110,55 @@ useEffect(() => {
         };
     }, [applicants, jobs.length]);
 
-    const filteredApplicants = useMemo(() => {
+    // ANALYTICS
 
-    switch (activeRecruiterTab) {
+    const filteredApplicants = applicants.filter((app) =>
+    app.candidateId?.name
+        ?.toLowerCase()
+        .includes(searchTerm.toLowerCase()) ||
 
-        case "accepted":
-    return applicants.filter(
-        app => String(app.status).toLowerCase() === "accepted"
-    );
-
-        case "pending":
-            return applicants.filter(
-                app => String(app.status).toLowerCase() === "pending"
-            );
-
-        case "rejected":
-            return applicants.filter(
-                app => String(app.status).toLowerCase() === "rejected"
-            );
-
-        default:
-            return applicants;
-    }
-
-}, [applicants, activeRecruiterTab]);
-
-    const totalPages = Math.ceil(
-    filteredApplicants.length / applicantsPerPage
+    app.candidateSkills?.some(skill =>
+        skill
+            .toLowerCase()
+            .includes(searchTerm.toLowerCase())
+    )
 );
 
-    const startIndex =
+// INTERACTIVE CHART FILTERS
+let advancedFilteredApplicants = [...filteredApplicants];
+
+// STATUS FILTER
+if (chartFilter) {
+
+    advancedFilteredApplicants =
+        advancedFilteredApplicants.filter(
+            app =>
+                String(app.status).toLowerCase() ===
+                chartFilter.toLowerCase()
+        );
+}
+
+// SKILL FILTER
+if (skillFilter) {
+
+    advancedFilteredApplicants =
+        advancedFilteredApplicants.filter(
+            app =>
+                app.candidateSkills?.includes(skillFilter)
+        );
+}
+
+// PAGINATION
+const totalPages = Math.ceil(
+    advancedFilteredApplicants.length /
+    applicantsPerPage
+);
+
+const startIndex =
     (currentPage - 1) * applicantsPerPage;
 
-    const paginatedApplicants =
-    filteredApplicants.slice(
+const paginatedApplicants =
+    advancedFilteredApplicants.slice(
         startIndex,
         startIndex + applicantsPerPage
     );
@@ -192,6 +213,97 @@ useEffect(() => {
             notify("Delete failed.", "error");
         }
     };
+
+    // Analytics variables
+    const totalApplications = applicants.length;
+
+const acceptedApplications =
+    applicants.filter(
+        app => String(app.status).toLowerCase() === "accepted"
+    ).length;
+
+const rejectedApplications =
+    applicants.filter(
+        app => String(app.status).toLowerCase() === "rejected"
+    ).length;
+
+const pendingApplications =
+    applicants.filter(
+        app => String(app.status).toLowerCase() === "pending"
+    ).length;
+
+const averageMatchScore =
+    applicants.length > 0
+        ? Math.round(
+            applicants.reduce(
+                (sum, app) => sum + (app.matchScore || 0),
+                0
+            ) / applicants.length
+        )
+        : 0;
+
+        // TOP SKILLS AI Analytics
+        const skillsMap = {};
+
+advancedFilteredApplicants.forEach((app) => {
+
+    (app.candidateSkills || []).forEach((skill) => {
+
+        skillsMap[skill] =
+            (skillsMap[skill] || 0) + 1;
+
+    });
+
+});
+
+const skillsData = Object.entries(skillsMap)
+    .map(([name, value]) => ({
+        name,
+        value
+    }))
+    .sort((a, b) => b.value - a.value)
+    .slice(0, 6);
+
+
+const topSkillsData =
+    Object.entries(skillsMap)
+        .map(([name, value]) => ({
+            name,
+            value
+        }))
+        .sort((a, b) => b.value - a.value)
+        .slice(0, 6);
+
+    // PIE CHART DATA
+    const statusData = [
+    {
+        name: "Accepted",
+        value: acceptedApplications
+    },
+    {
+        name: "Rejected",
+        value: rejectedApplications
+    },
+    {
+        name: "Pending",
+        value: pendingApplications
+    }
+];
+
+const STATUS_COLORS = [
+    "#22c55e", // accepted
+    "#ef4444", // rejected
+    "#f59e0b", // pending
+];
+
+const SKILL_COLORS = [
+    "#6366f1",
+    "#8b5cf6",
+    "#06b6d4",
+    "#14b8a6",
+    "#f97316",
+    "#ec4899",
+];
 
 const getResumeUrl = (filePath) => {
 
@@ -385,6 +497,222 @@ const getResumeUrl = (filePath) => {
                     <h3>Candidate Ranking</h3>
                     <button className="btn-applicants" onClick={() => navigate('/admin/applicants')}>Manage All</button>
                 </div>
+
+                    <div className="analytics-grid">
+
+    <div className="analytics-card">
+        <h3>Total Applications</h3>
+        <h1>{totalApplications}</h1>
+    </div>
+
+    <div className="analytics-card">
+        <h3>Average Match Score</h3>
+        <h1>{averageMatchScore}%</h1>
+    </div>
+
+    <div className="analytics-card">
+        <h3>Accepted Candidates</h3>
+        <h1>{acceptedApplications}</h1>
+    </div>
+
+    <div className="analytics-card">
+        <h3>Rejected Candidates</h3>
+        <h1>{rejectedApplications}</h1>
+    </div>
+
+</div>
+
+<div
+    style={{
+        marginBottom: "20px"
+    }}
+>
+
+    <input
+        type="text"
+        placeholder="Search candidate or skill..."
+        value={searchTerm}
+        onChange={(e) => {
+            setSearchTerm(e.target.value);
+            setCurrentPage(1);
+        }}
+        style={{
+            width: "100%",
+            padding: "12px",
+            borderRadius: "10px",
+            border: "1px solid #334155",
+            background: "#0f172a",
+            color: "white"
+        }}
+    />
+
+</div>
+
+<div className="charts-wrapper">
+
+    <div className="chart-box">
+
+        <h3>Application Status</h3>
+
+        <ResponsiveContainer width="100%" height={300}>
+
+            <PieChart>
+
+<Pie
+    data={statusData}
+    dataKey="value"
+    isAnimationActive={true}
+    animationDuration={900}
+    outerRadius={110}
+    innerRadius={55}
+    paddingAngle={4}
+    label
+    onClick={(data) => {
+
+        if (
+            chartFilter ===
+            data.name.toLowerCase()
+        ) {
+
+            setChartFilter(null);
+
+        } else {
+
+            setChartFilter(
+                data.name.toLowerCase()
+            );
+        }
+    }}
+>
+
+    {statusData.map((entry, index) => (
+
+        <Cell
+            key={index}
+            fill={
+                STATUS_COLORS[
+                    index % STATUS_COLORS.length
+                ]
+            }
+        />
+
+    ))}
+
+</Pie>
+
+                <Tooltip
+    contentStyle={{
+        background: "#0f172a",
+        border: "1px solid #334155",
+        borderRadius: "12px",
+        color: "white"
+    }}
+/>
+
+                <Legend />
+
+            </PieChart>
+
+        </ResponsiveContainer>
+
+    </div>
+
+    <div className="chart-box">
+
+        <h3>Top Candidate Skills</h3>
+
+        <ResponsiveContainer width="100%" height={300}>
+
+            <BarChart data={topSkillsData}>
+
+                <CartesianGrid strokeDasharray="3 3" />
+
+                <XAxis dataKey="name" />
+
+                <YAxis />
+
+                <Tooltip
+    contentStyle={{
+        background: "#0f172a",
+        border: "1px solid #334155",
+        borderRadius: "12px",
+        color: "white"
+    }}
+/>
+
+                <Bar
+    dataKey="value"
+    radius={[10, 10, 0, 0]}
+    isAnimationActive={true}
+    animationDuration={900}
+    onClick={(data) => {
+
+        if (skillFilter === data.name) {
+
+            setSkillFilter(null);
+
+        } else {
+
+            setSkillFilter(data.name);
+        }
+    }}
+>
+
+    {skillsData.map((entry, index) => (
+
+        <Cell
+            key={index}
+            fill={
+                SKILL_COLORS[
+                    index % SKILL_COLORS.length
+                ]
+            }
+        />
+
+    ))}
+
+</Bar>
+            </BarChart>
+
+        </ResponsiveContainer>
+
+    </div>
+
+</div>
+
+{/* Active FILTER CHIPs */}
+            <div
+    style={{
+        display: "flex",
+        gap: "12px",
+        marginBottom: "20px",
+        flexWrap: "wrap"
+    }}
+>
+
+    {chartFilter && (
+        <button
+            className="filter-chip"
+            onClick={() =>
+                setChartFilter(null)
+            }
+        >
+            Status: {chartFilter} ✕
+        </button>
+    )}
+
+    {skillFilter && (
+        <button
+            className="filter-chip"
+            onClick={() =>
+                setSkillFilter(null)
+            }
+        >
+            Skill: {skillFilter} ✕
+        </button>
+    )}
+
+</div>
 
                 {applicants.length === 0 ? (
                     <p className="empty-state">No applicants yet.</p>
