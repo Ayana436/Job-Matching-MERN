@@ -748,6 +748,43 @@ const getStatusClass = (status) => {
     }
 };
 
+
+const getStatusColor = (status) => {
+    switch ((status || "").toLowerCase()) {
+        case "accepted":
+            return "#22c55e";
+
+        case "rejected":
+            return "#ef4444";
+
+        case "review":
+            return "#3b82f6";
+
+        default:
+            return "#f59e0b";
+    }
+};
+
+const getTimelineStep = (status) => {
+    switch ((status || "").toLowerCase()) {
+
+        case "pending":
+            return 1;
+
+        case "review":
+            return 2;
+
+        case "accepted":
+        case "rejected":
+            return 3;
+
+        default:
+            return 1;
+    }
+};
+
+
+
     return (
         <div className={`candidate-page ${theme === "light" ? "light-mode" : ""}`}>
             {toast && <div className={`toast ${toast.type}`}>{toast.message}</div>}
@@ -1200,11 +1237,12 @@ const getStatusClass = (status) => {
 
         {visibleJobs.map((job) => (
 
-            <div className="job-wrapper">
+<div
+    key={job._id}
+    className="job-wrapper"
+>
 
-{/* APPLICATION TIMELINE + STATUS BADGE */}
     <JobCard
-        key={job._id}
         job={job}
         onApply={handleApply}
         isSaved={savedJobs.includes(job._id)}
@@ -1214,51 +1252,85 @@ const getStatusClass = (status) => {
 
     {job.applied && (
 
-        <div className="application-timeline">
+        <div className="application-status-container">
 
-            <div className="timeline-step completed">
-                Applied
-            </div>
-
-            {/* <div
-                className={`timeline-step ${
-                    job.applicationStatus === "review"
-                        ? "completed"
-                        : ""
-                }`}
-            >
-                In Review
-            </div> */}
-
+            {/* STATUS BADGE */}
             <div
-                className={`timeline-step ${
-                    job.applicationStatus === "accepted"
-                        ? "completed accepted"
-                        : ""
-                }`}
-            >
-                Accepted
-            </div>
-
-            <div
-                className={`timeline-step ${
-                    job.applicationStatus === "rejected"
-                        ? "completed rejected"
-                        : ""
-                }`}
-            >
-                Rejected
-            </div>
-
-            |<span
                 className={`status-badge ${getStatusClass(
                     job.applicationStatus
                 )}`}
             >
                 {job.applicationStatus || "Pending"}
-            </span>
+            </div>
+
+            {/* TIMELINE */}
+            <div className="application-timeline">
+
+                {/* APPLIED */}
+                <div className="timeline-item">
+
+                    <div
+                        className={`timeline-dot completed`}
+                    />
+
+                    <span>
+                        Applied
+                    </span>
+
+                </div>
+
+                {/* REVIEW */}
+                <div className="timeline-line" />
+
+                <div className="timeline-item">
+
+                    <div
+                        className={`timeline-dot ${
+                            getTimelineStep(
+                                job.applicationStatus
+                            ) >= 2
+                                ? "completed"
+                                : ""
+                        }`}
+                    />
+
+                    <span>
+                        Review
+                    </span>
+
+                </div>
+
+                {/* FINAL */}
+                <div className="timeline-line" />
+
+                <div className="timeline-item">
+
+                    <div
+                        className={`timeline-dot ${
+                            getTimelineStep(
+                                job.applicationStatus
+                            ) >= 3
+                                ? job.applicationStatus === "accepted"
+                                    ? "accepted"
+                                    : "rejected"
+                                : ""
+                        }`}
+                    />
+
+                    <span>
+                        {job.applicationStatus === "accepted"
+                            ? "Accepted"
+                            : job.applicationStatus === "rejected"
+                            ? "Rejected"
+                            : "Decision"}
+                    </span>
+
+                </div>
+
+            </div>
 
         </div>
+
     )}
 
 </div>
