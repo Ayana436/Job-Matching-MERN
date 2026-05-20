@@ -95,6 +95,7 @@ const [hasMatchedResults, setHasMatchedResults] = useState(false);
     const [selectedChips, setSelectedChips] = useState([]);
     const [suggestedChips, setSuggestedChips] = useState([]);
     const [recentSearches, setRecentSearches] = useState(() => getStoredJson("recentSearches", []));
+    const [savedSearches, setSavedSearches] = useState(() => getStoredJson("savedSearches", []));
     const [savedJobs, setSavedJobs] = useState(() => getStoredJson("savedJobs", []));
     const [theme, setTheme] = useState(() => localStorage.getItem("theme") || "dark");
     const [activeTab, setActiveTab] = useState("all");
@@ -212,7 +213,7 @@ useEffect(() => {
                 "/api/jobs",
             {
                 headers: {
-                    Authorization: `Bearer${token}`,
+                    Authorization: `Bearer ${token}`,
                 },
             });
 
@@ -286,10 +287,90 @@ useEffect(() => {
         localStorage.setItem("theme", theme);
     }, [theme]);
 
+    // LOGOUT + TOKEN EXPIRY:
+    useEffect(() => {
+
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+        navigate("/auth");
+        return;
+    }
+
+    try {
+
+        const payload = JSON.parse(
+            atob(token.split(".")[1])
+        );
+
+        const expiry = payload.exp * 1000;
+
+        // TOKEN EXPIRED
+        if (Date.now() >= expiry) {
+
+            localStorage.removeItem("token");
+            localStorage.removeItem("user");
+
+            notify("Session expired. Please login again.", "error");
+
+            navigate("/auth");
+
+            return;
+        }
+
+        // AUTO LOGOUT TIMER
+        const timeout = expiry - Date.now();
+
+        const logoutTimer = setTimeout(() => {
+
+            localStorage.removeItem("token");
+            localStorage.removeItem("user");
+
+            notify("Session expired. Logged out.", "error");
+
+            navigate("/auth");
+
+        }, timeout);
+
+        return () => clearTimeout(logoutTimer);
+
+    } catch (err) {
+
+        console.error("Token decode failed:", err);
+
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+
+        navigate("/auth");
+    }
+
+}, [navigate, notify]);
+
     const saveRecentSearch = (query) => {
         if (!query.trim()) return;
         setRecentSearches((prev) => [query, ...prev.filter((item) => item !== query)].slice(0, 5));
     };
+
+    const saveSearch = () => {
+
+    if (!searchQuery.trim()) return;
+
+    const updated = [
+        searchQuery,
+        ...savedSearches.filter(
+            (item) => item !== searchQuery
+        )
+    ].slice(0, 10);
+
+    setSavedSearches(updated);
+
+    localStorage.setItem(
+        "savedSearches",
+        JSON.stringify(updated)
+    );
+
+    notify("Search saved");
+};
 
     const runSearch = async (query = searchQuery) => {
         const cleanQuery = query.trim();
@@ -561,6 +642,24 @@ const filteredJobs = useMemo(() => {
 // }, [jobs, savedJobs, showSavedOnly, applicationFilter]);
     // const visibleJobs = useMemo(() => filteredJobs.slice(0, visibleCount), [filteredJobs, visibleCount]);
     const acceptedCount = applications.filter((app) => String(app.status).toLowerCase() === "accepted").length;
+    
+    // Profile Completion
+    const profileCompletion = useMemo(() => {
+
+    let score = 0;
+
+    if (user?.name) score += 25;
+
+    if (user?.email) score += 25;
+
+    if (resumeHistory.length > 0) score += 25;
+
+    if (applications.length > 0) score += 25;
+
+    return score;
+
+}, [user, resumeHistory, applications]);
+    
     const averageMatch = jobs.length
         ? Math.round(jobs.reduce((sum, job) => sum + (job.matchScore || 0), 0) / jobs.length)
         : 0;
@@ -626,6 +725,27 @@ const getResumeUrl = (filePath) => {
     }
 
     return `http://localhost:5000/${cleanedPath}`;
+};
+
+// STATUS BADGE LOGIC
+const getStatusClass = (status) => {
+
+    if (!status) return "status-pending";
+
+    switch (status.toLowerCase()) {
+
+        case "accepted":
+            return "status-accepted";
+
+        case "rejected":
+            return "status-rejected";
+
+        case "review":
+            return "status-review";
+
+        default:
+            return "status-pending";
+    }
 };
 
     return (
@@ -753,6 +873,23 @@ const getResumeUrl = (filePath) => {
         <span>Avg Match</span>
     </div>
 
+<div className="profile-completion-card">
+
+    <strong>{profileCompletion}%</strong>
+
+    <span>Profile Completion</span>
+
+    {/* <div className="profile-progress-bar">
+        <div
+            className="profile-progress-fill"
+            style={{
+                width: `${profileCompletion}%`
+            }}
+        />
+    </div> */}
+
+</div>
+
 </section>
 
             <section className="candidate-panel">
@@ -765,6 +902,7 @@ const getResumeUrl = (filePath) => {
                         onKeyDown={(e) => e.key === "Enter" && runSearch()}
                     />
                     <button className="primary-btn" onClick={() => runSearch()}>Search</button>
+                    <button className="ghost-btn" onClick={saveSearch}>Save Search</button>
                 </div>
 
                 {recentSearches.length > 0 && (
@@ -777,6 +915,29 @@ const getResumeUrl = (filePath) => {
                         ))}
                     </div>
                 )}
+
+                {savedSearches.length > 0 && (
+
+                <div className="recent-searches">
+
+                    <span>Saved Searches:</span>
+
+                    {savedSearches.map((item) => (
+
+                        <button
+                            key={item}
+                            onClick={() => {
+                                setSearchQuery(item);
+                                runSearch(item);
+                            }}
+                        >
+                            {item}
+                        </button>
+
+                    ))}
+
+                </div>
+            )}
 
                 <div className="chips-marquee">
                     <div className="chips-track smooth-scroll">
@@ -1039,14 +1200,68 @@ const getResumeUrl = (filePath) => {
 
         {visibleJobs.map((job) => (
 
-            <JobCard
-                key={job._id}
-                job={job}
-                onApply={handleApply}
-                isSaved={savedJobs.includes(job._id)}
-                onToggleSave={toggleSavedJob}
-                applicationStatus={job.applicationStatus}
-            />
+            <div className="job-wrapper">
+
+{/* APPLICATION TIMELINE + STATUS BADGE */}
+    <JobCard
+        key={job._id}
+        job={job}
+        onApply={handleApply}
+        isSaved={savedJobs.includes(job._id)}
+        onToggleSave={toggleSavedJob}
+        applicationStatus={job.applicationStatus}
+    />
+
+    {job.applied && (
+
+        <div className="application-timeline">
+
+            <div className="timeline-step completed">
+                Applied
+            </div>
+
+            {/* <div
+                className={`timeline-step ${
+                    job.applicationStatus === "review"
+                        ? "completed"
+                        : ""
+                }`}
+            >
+                In Review
+            </div> */}
+
+            <div
+                className={`timeline-step ${
+                    job.applicationStatus === "accepted"
+                        ? "completed accepted"
+                        : ""
+                }`}
+            >
+                Accepted
+            </div>
+
+            <div
+                className={`timeline-step ${
+                    job.applicationStatus === "rejected"
+                        ? "completed rejected"
+                        : ""
+                }`}
+            >
+                Rejected
+            </div>
+
+            |<span
+                className={`status-badge ${getStatusClass(
+                    job.applicationStatus
+                )}`}
+            >
+                {job.applicationStatus || "Pending"}
+            </span>
+
+        </div>
+    )}
+
+</div>
 
         ))}
 
