@@ -498,7 +498,7 @@ const getResumeUrl = (filePath) => {
                     <button className="btn-applicants" onClick={() => navigate('/admin/applicants')}>Manage All</button>
                 </div>
 
-                    <div className="analytics-grid">
+                    {/* <div className="analytics-grid">
 
     <div className="analytics-card">
         <h3>Total Applications</h3>
@@ -520,7 +520,7 @@ const getResumeUrl = (filePath) => {
         <h1>{rejectedApplications}</h1>
     </div>
 
-</div>
+</div> */}
 
 <div
     style={{

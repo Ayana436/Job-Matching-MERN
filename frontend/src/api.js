@@ -10,22 +10,32 @@ const API = axios.create({
     }
 });
 
-API.interceptors.request.use((config) => {
-    const token = localStorage.getItem("token");
-    if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-}, (error) => Promise.reject(error)
-);
-API.interceptors.request.use((config) => {
+API.interceptors.request.use((req) => {
     const token = localStorage.getItem("token");
 
     if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
+        req.headers.Authorization = `Bearer ${token}`;
     }
 
-    return config;
+    return req;
 });
+
+// API.interceptors.request.use((config) => {
+//     const token = localStorage.getItem("token");
+//     if (token) {
+//         config.headers.Authorization = `Bearer ${token}`;
+//     }
+//     return config;
+// }, (error) => Promise.reject(error)
+// );
+// API.interceptors.request.use((config) => {
+//     const token = localStorage.getItem("token");
+
+//     if (token) {
+//         config.headers.Authorization = `Bearer ${token}`;
+//     }
+
+//     return config;
+// });
 
 export default API;

@@ -50,7 +50,7 @@ useEffect(() => {
 const handleStatusUpdate = async (applicationId, newStatus) => {
     try {
         await API
-        patch(`/api/jobs/applicants/${applicationId}`, {
+        .patch(`/api/jobs/applicants/${applicationId}`, {
             status: newStatus.toLowerCase()
         });
         

@@ -32,12 +32,18 @@ const handleSubmit = async (e) => {
         if (isLogin) {
             const token = res.data.token;
             const loggedInUser = res.data.user;
+            
+            if (loggedInUser.role !== role){
+                alert(`This account is registered as ${loggedInUser.role}, not ${role}.`);
+            return;
+            }
 
             localStorage.setItem("token", token);
 
             const userToSave = {
                 id: loggedInUser.id || loggedInUser._id,
                 name: loggedInUser.name,
+                email: loggedInUser.email,
                 role: loggedInUser.role,
             };
 
@@ -47,7 +53,7 @@ const handleSubmit = async (e) => {
             );
 
             navigate(
-                loggedInUser.role === "recruiter"
+                userToSave.role === "recruiter"
                     ? "/admin"
                     : "/candidate"
             );

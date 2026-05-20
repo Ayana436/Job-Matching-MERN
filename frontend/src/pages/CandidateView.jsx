@@ -4,6 +4,10 @@ import API from "../api";
 import JobCard from "../components/JobCard";
 
 
+const token = localStorage.getItem("token");
+
+const user = JSON.parse(localStorage.getItem("user"));
+
 const defaultChips = [
     "AI",
     "Frontend",
@@ -166,8 +170,8 @@ const fetchApplications = useCallback(async () => {
             `/api/jobs/my-applications/${userId}`,
             {
                 headers: {
-                    Authorization: `Bearer ${token}`
-                }
+                    Authorization: `Bearer ${token}`,
+                },
             }
         );
 
@@ -202,7 +206,15 @@ useEffect(() => {
         setJobsLoading(true);
 
         try {
-            const jobsRes = await API.get("/api/jobs");
+            const token = localStorage.getItem("token");
+
+            const jobsRes = await API.get(
+                "/api/jobs",
+            {
+                headers: {
+                    Authorization: `Bearer${token}`,
+                },
+            });
 
             let appsData = [];
 
@@ -249,7 +261,7 @@ setJobs(enrichedJobs);
 
 useEffect(() => {
     const interval = setInterval(() => {
-
+        
         if (!hasMatchedResults && selectedChips.length === 0) {
             fetchJobs();
         }
@@ -430,7 +442,7 @@ const handleResumeUpload = async () => {
             const token = localStorage.getItem("token");
 
             const res = await API.post(
-                "/api/jobs/apply", 
+                "/api/jobs/apply",
             {
                 jobId,
                 matchScore,
@@ -439,8 +451,8 @@ const handleResumeUpload = async () => {
             },
             {
                 headers: {
-                    Authorization: `Bearer ${token}`
-                }
+                    Authorization: `Bearer ${token}`,
+                },
             }
         );
 

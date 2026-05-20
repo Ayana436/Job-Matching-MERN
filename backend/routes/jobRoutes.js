@@ -6,6 +6,7 @@ import User from '../models/User.js'
 import Job from '../models/Job.js';
 import Application from '../models/Application.js';
 import ResumeHistory from '../models/ResumeHistory.js';
+import sendEmail from '../utils/sendEmail.js';
 import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs';
 import { calculateSimilarity, preprocessText } from '../utils/nlpUtils.js';
 import { authorize, protect } from '../middleware/authMiddleware.js';
@@ -435,13 +436,18 @@ router.get('/my-applications/:candidateId', protect, async (req, res) => {
             return res.status(403).json({ error: "You can only view your own applications" });
         }
 
-        const applications = await Application.find()
-            .populate({
-                path: "candidateId",
-                select: "name email resume"
-            })
-            .populate('jobId', 'title location company workMode') 
-            .sort({ createdAt: -1 }); // Show newest first
+const applications = await Application.find({
+    candidateId: candidateId
+})
+.populate({
+    path: "candidateId",
+    select: "name email resume"
+})
+.populate(
+    'jobId',
+    'title location company workMode'
+)
+.sort({ createdAt: -1 });
             
         res.status(200).json(applications);
     } catch (err) {
@@ -581,28 +587,142 @@ router.get(
 // GET all applicants (Recruiter Only)
 
 // Route to update application status (Approve/Reject)
-router.patch('/applicants/:id', protect, authorize('recruiter'), async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { status } = req.body;
+router.patch(
+    '/applicants/:id',
+    protect,
+    authorize('recruiter'),
 
-        // Find the application and update its status field
-        const updatedApplication = await Application.findByIdAndUpdate(
-            id,
-            { status: status },
-            { new: true } // Returns the updated document
-        );
+    async (req, res) => {
 
-        if (!updatedApplication) {
-            return res.status(404).json({ error: "Application not found" });
+        try {
+
+            const { id } = req.params;
+
+            const status =
+    String(req.body.status).toLowerCase();
+
+            const updatedApplication =
+                await Application.findByIdAndUpdate(
+
+                    id,
+
+                    { status },
+
+                    { new: true }
+
+                )
+                .populate(
+                    'candidateId',
+                    'name email'
+                )
+                .populate(
+                    'jobId',
+                    'title'
+                );
+
+            if (!updatedApplication) {
+
+                return res.status(404).json({
+                    error: "Application not found"
+                });
+            }
+
+            const candidate =
+                updatedApplication.candidateId;
+
+            const job =
+                updatedApplication.jobId;
+
+            let emailSubject = "";
+            let emailHtml = "";
+
+            // ACCEPTED
+            if (
+                String(status).toLowerCase()
+                === "accepted"
+            ) {
+
+                emailSubject =
+                    "Application Accepted";
+
+                emailHtml = `
+                    <h2>
+                        Congratulations ${candidate.name} 🎉
+                    </h2>
+
+                    <p>
+                        Your application for
+                        <b>${job.title}</b>
+                        has been accepted.
+                    </p>
+
+                    <p>
+                        The recruiter will contact
+                        you soon.
+                    </p>
+                `;
+            }
+
+            // REJECTED
+            else if (
+                String(status).toLowerCase()
+                === "rejected"
+            ) {
+
+                emailSubject =
+                    "Application Update";
+
+                emailHtml = `
+                    <h2>
+                        Hello ${candidate.name}
+                    </h2>
+
+                    <p>
+                        Thank you for applying for
+                        <b>${job.title}</b>.
+                    </p>
+
+                    <p>
+                        We appreciate your interest,
+                        but another candidate was
+                        selected for this role.
+                    </p>
+
+                    <p>
+                        We encourage you to apply
+                        again in future.
+                    </p>
+                `;
+            }
+
+            // SEND EMAIL
+            if (candidate?.email) {
+
+                await sendEmail({
+                    to: candidate.email,
+                    subject: emailSubject,
+                    html: emailHtml
+                });
+            }
+
+            res.status(200).json(
+                updatedApplication
+            );
+
+        } catch (err) {
+
+            console.error(
+                "Status Update Error:",
+                err
+            );
+
+            res.status(500).json({
+                error:
+                    "Server failed to update status"
+            });
         }
-
-        res.status(200).json(updatedApplication);
-    } catch (err) {
-        console.error("Status Update Error:", err);
-        res.status(500).json({ error: "Server failed to update status" });
     }
-});
+);
 
 // DOWNLOAD RESUME
 router.get(
