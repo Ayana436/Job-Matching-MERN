@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import ProtectedRoute from "./components/ProtectedRoute";
+import Unauthorized from "./pages/Unauthorized";
 import RecruiterView from "./pages/RecruiterView";
 import AuthPage from "./pages/AuthPage";
 import CandidateView from "./pages/CandidateView";
@@ -52,6 +53,13 @@ function App() {
                         </ProtectedRoute>
                     }
                 />
+
+                <Route
+                    path="/unauthorized"
+                    element={<Unauthorized/>
+                    } 
+                />
+
             </Routes>
         </div>
     );

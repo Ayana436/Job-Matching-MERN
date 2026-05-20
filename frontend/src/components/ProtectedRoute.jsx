@@ -21,12 +21,12 @@ const ProtectedRoute = ({ children, allowedRole }) => {
     if (!user) {
         localStorage.removeItem("token");
         localStorage.removeItem("user");
-        return <Navigate to="/auth" replace />;
+        return <Navigate to="/unauthorized" replace />;
     }
 
     // wrong role
     if (allowedRole && user.role !== allowedRole) {
-        return <Navigate to="/auth" replace />;
+        return <Navigate to="/unauthorized" replace />;
     }
 
     return children;
