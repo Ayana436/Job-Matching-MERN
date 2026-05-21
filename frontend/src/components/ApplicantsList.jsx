@@ -163,7 +163,7 @@ const paginatedApplicants =
                         .replaceAll("\\", "/");
 
                 window.open(
-                    `http://localhost:5000/${resumeUrl}`,
+                    `${import.meta.env.VITE_API_URL}/${resumeUrl}`,
                     "_blank"
                 );
             }}
@@ -190,7 +190,7 @@ const paginatedApplicants =
                     document.createElement("a");
 
                 link.href =
-                    `http://localhost:5000/${resumeUrl}`;
+                    `${import.meta.env.VITE_API_URL}/${resumeUrl}`;
 
                 link.download =
                     app.candidateId.resume.fileName ||
