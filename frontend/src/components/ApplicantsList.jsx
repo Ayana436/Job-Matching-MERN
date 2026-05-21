@@ -103,6 +103,8 @@ const paginatedApplicants =
             <div style={{display:'flex', justifyContent:'space-between'}}>
                 <div className="search-container" style={{ marginBottom: '20px', width:'60%' }}>
             <input
+                id='candidate-name'
+                name='candidate-name'
                 type="text"
                 placeholder="🔍 Search by candidate name..."
                 className="auth-input" // Reusing your existing input style

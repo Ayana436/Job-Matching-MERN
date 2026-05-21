@@ -103,10 +103,12 @@ const handleSubmit = async (e) => {
                 <form onSubmit={handleSubmit} className="auth-form-wrapper">
                     {!isLogin && (
                         <div className="auth-input-group">
-                            <label className="input-label">Full Name</label>
+                            <label htmlFor='full-name' className="input-label">Full Name</label>
                             <input 
-                                className="auth-input"
+                                id='full-name'
+                                name='full-name'
                                 type="text" 
+                                className="auth-input"
                                 placeholder="Enter your name" 
                                 required 
                                 value={formData.name}
@@ -116,10 +118,12 @@ const handleSubmit = async (e) => {
                     )}
                     
                     <div className="auth-input-group">
-                        <label className="input-label">Email Address</label>
+                        <label className="input-label" htmlFor='email'>Email Address</label>
                         <input 
-                            className="auth-input"
+                            id='email'
+                            name='email'
                             type="email" 
+                            className="auth-input"
                             placeholder="name@company.com" 
                             required 
                             value={formData.email}
@@ -128,7 +132,7 @@ const handleSubmit = async (e) => {
                     </div>
 
                     <div className="auth-input-group" style={{ marginBottom: isLogin ? '5px' : '20px' }}>
-                        <label className="input-label">Password</label>
+                        <label className="input-label" htmlFor='password'>Password</label>
                         <input 
                             className="auth-input"
                             type="password" 

@@ -1,0 +1,47 @@
+    /* --- ANIMATIONS --- */
+
+    @keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+    }
+
+    @keyframes popIn {
+    from {
+        transform: scale(0.8);
+        opacity: 0;
+    }
+
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+    }
+
+    @keyframes marqueeMove {
+    from {
+        transform: translateX(0);
+    }
+
+    to {
+        transform: translateX(-40%);
+    }
+    }
+
+    @keyframes skeletonPulse {
+    to {
+        background-position: -220% 0;
+    }
+    }
+
+    @keyframes fadeSlide {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    }

@@ -685,19 +685,22 @@ const getResumeUrl = (filePath) => {
                 <form onSubmit={handleSubmit}>
                     <div className="form-grid-2">
                         <div className="input-group">
-                            <label>Job Title</label>
-                            <input className="input-field" required value={formData.title} onChange={(e) => setFormData({...formData, title: e.target.value})} />
+                            <label htmlFor='job title'>Job Title</label>
+                            <input id="job-title" name='job-title' type='text' className="input-field" required value={formData.title} onChange={(e) => setFormData({...formData, title: e.target.value})} />
                         </div>
                         <div className="input-group">
-                            <label>Location (City)</label>
-                            <input className="input-field" required value={formData.location} onChange={(e) => setFormData({...formData, location: e.target.value})} />
+                            <label htmlFor='location'>Location (City)</label>
+                            <input id="location" name='location' type='text' className="input-field" required value={formData.location} onChange={(e) => setFormData({...formData, location: e.target.value})} />
                         </div>
                     </div>
                     <div className="input-group" style={{ marginTop: '20px' }}>
-                        <label style={{ display: 'block', marginBottom: '8px', opacity: 0.8 }}>
+                        <label htmlFor='required skills' style={{ display: 'block', marginBottom: '8px', opacity: 0.8 }}>
                             Required Skills (Comma separated: e.g. React, Node, Python)
                         </label>
                         <input 
+                            id='required-skills'
+                            name='required-skills'
+                            type='text'
                             className="input-field"
                             required 
                             placeholder="React, Node, MongoDB..."
@@ -708,7 +711,7 @@ const getResumeUrl = (filePath) => {
 
                     <div className="form-grid-3">
                         <div className="input-group">
-                            <label>Work Mode</label>
+                            <label htmlFor='work-mode'>Work Mode</label>
                             <select className="input-field" value={formData.workMode} onChange={(e) => setFormData({...formData, workMode: e.target.value})}>
                                 <option value="Office">Office</option>
                                 <option value="Remote">Remote</option>
@@ -716,7 +719,7 @@ const getResumeUrl = (filePath) => {
                             </select>
                         </div>
                         <div className="input-group">
-                            <label>Job Type</label>
+                            <label htmlFor='job-type'>Job Type</label>
                             <select className="input-field" value={formData.jobType} onChange={(e) => setFormData({...formData, jobType: e.target.value})}>
                                 <option value="Full-time">Full-time</option>
                                 <option value="Part-time">Part-time</option>
@@ -724,7 +727,7 @@ const getResumeUrl = (filePath) => {
                             </select>
                         </div>
                         <div className="input-group">
-                            <label>Experience</label>
+                            <label htmlFor='experience'>Experience</label>
                             <select className="input-field" value={formData.experienceLevel} onChange={(e) => setFormData({...formData, experienceLevel: e.target.value})}>
                                 <option value="Entry Level">Entry Level</option>
                                 <option value="Mid Level">Mid Level</option>
@@ -732,7 +735,7 @@ const getResumeUrl = (filePath) => {
                             </select>
                         </div>
                         <div className="input-group">
-                            <label>Salary</label>
+                            <label htmlFor='salary'>Salary</label>
                             <select className="input-field" value={formData.salary} onChange={(e) => setFormData({...formData, salary: e.target.value})}>
                                 <option value="Negotiable">Negotiable</option>
                                 <option value="Unpaid">Unpaid</option>
@@ -746,7 +749,7 @@ const getResumeUrl = (filePath) => {
                     </div>
 
                     <div className="input-group">
-                        <label>Description</label>
+                        <label htmlFor='description'>Description</label>
                         <textarea className="input-field" required rows="4" value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} />
                     </div>
 
@@ -800,6 +803,8 @@ const getResumeUrl = (filePath) => {
 >
 
     <input
+        id='searchS'
+        name='searchS'
         type="text"
         placeholder="Search candidate or skill..."
         value={searchTerm}

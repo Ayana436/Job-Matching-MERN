@@ -7,6 +7,14 @@ import CandidateView from "./pages/CandidateView";
 import ApplicantsList from "./components/ApplicantsList";
 import MyApplications from "./components/MyApplications";
 import "./App.css";
+import "./styles/navbar.css";
+import "./styles/auth.css";
+import "./styles/recruiter.css";
+import "./styles/candidate.css";
+import "./styles/sidebar.css";
+import "./styles/analytics.css";
+import "./styles/responsive.css";
+import "./styles/animations.css";
 
 function App() {
     return (

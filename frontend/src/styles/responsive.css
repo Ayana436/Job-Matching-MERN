@@ -1,0 +1,30 @@
+    /* --- RESPONSIVE --- */
+
+    @media (max-width: 900px) {
+    .main-layout {
+        flex-direction: column;
+    }
+
+    .sidebar {
+        width: 100%;
+    }
+    }
+
+    @media (max-width: 768px) {
+    .results-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .candidate-page {
+        padding: 18px;
+    }
+
+    .job-card-top,
+    .resume-panel {
+        flex-direction: column;
+    }
+
+    .form-grid-2 {
+        grid-template-columns: 1fr;
+    }
+    }

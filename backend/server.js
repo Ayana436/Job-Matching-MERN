@@ -24,7 +24,13 @@ let isDbConnected = false;
 let isConnectingDb = false;
 
 // MIDDLEWARES
-app.use(cors({ origin: process.env.CLIENT_URL, credentials: true }));
+app.use(cors({
+    origin: [
+        "http://localhost:5173",
+        "https://hirecraft-orpin.vercel.app"
+    ],
+    credentials: true
+    }));
 app.use(express.json());
 app.use(requestLogger);
 

@@ -932,6 +932,8 @@ const getTimelineStep = (status) => {
             <section className="candidate-panel">
                 <div className="search-row">
                     <input
+                        id="search"
+                        name="search"
                         type="text"
                         placeholder="Search jobs, skills, locations..."
                         value={searchQuery}
@@ -1010,9 +1012,11 @@ const getTimelineStep = (status) => {
                     <p>PDF resumes are matched against required skills and ranked by score.</p>
                 </div>
                 <div className="resume-upload-wrapper">
-                    <label className="custom-file-upload">
+                    <label className="custom-file-upload" htmlFor="choose resume pdf">
                         Choose Resume PDF
                         <input
+                            id="hidden-file-input"
+                            name="hidden-file-input"
                             className="hidden-file-input"
                             type="file"
                             accept=".pdf"
