@@ -101,13 +101,6 @@ app.use((req, res, next) => {
 // ROUTES
 app.use('/api/auth', authRoutes);
 app.use('/api/jobs', jobRoutes);
-app. use('/api/analytics', analyticsRoutes);
-
-// Upload folder static access
-app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
-
-app.use(notFound);
-app.use(errorHandler);
 
 // BASE ROUTE
 app.get('/', (req, res) => {
@@ -117,6 +110,15 @@ app.get('/', (req, res) => {
         version: '1.0.0'
     });
 });
+
+app. use('/api/analytics', analyticsRoutes);
+
+// Upload folder static access
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+
+app.use(notFound);
+app.use(errorHandler);
+
 
 app.get('/api/health', (req, res) => {
     res.status(isDbConnected ? 200 : 503).json({
