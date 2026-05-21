@@ -99,9 +99,6 @@ app.use((req, res, next) => {
 });
 
 // ROUTES
-app.use('/api/auth', authRoutes);
-app.use('/api/jobs', jobRoutes);
-
 // BASE ROUTE
 app.get('/', (req, res) => {
     res.status(200).json({
@@ -111,7 +108,20 @@ app.get('/', (req, res) => {
     });
 });
 
+app.get('/api/health', (req, res) => {
+    res.status(isDbConnected ? 200 : 503).json({
+        api: 'running',
+        database: isDbConnected ? 'connected' : 'unavailable'
+    });
+});
+
 app. use('/api/analytics', analyticsRoutes);
+
+
+app.use('/api/auth', authRoutes);
+app.use('/api/jobs', jobRoutes);
+
+
 
 // Upload folder static access
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
@@ -120,12 +130,6 @@ app.use(notFound);
 app.use(errorHandler);
 
 
-app.get('/api/health', (req, res) => {
-    res.status(isDbConnected ? 200 : 503).json({
-        api: 'running',
-        database: isDbConnected ? 'connected' : 'unavailable'
-    });
-});
 
 // START SERVER
 const PORT = process.env.PORT || 5000;
