@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BarChart, Bar, PieChart, Pie, Cell, Tooltip, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Legend } from 'recharts';
+import { BarChart, Bar, PieChart, Pie, Cell, LineChart, Line, Tooltip, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Legend } from 'recharts';
 import API from '../api';
 
 
@@ -12,6 +12,10 @@ const RecruiterView = () => {
     });
     const [jobs, setJobs] = useState([]);
     const [applicants, setApplicants] = useState([]);
+    const [applicantsData, setApplicantsData] = useState([]);
+    const [ratioData, setRatioData] = useState(null);
+    const [skillsData, setSkillsData] = useState([]);
+    const [trendsData, setTrendsData] = useState([]);
     const [visibleApplicants, setVisibleApplicants] = useState(6);
     const [editingId, setEditingId] = useState(null);
     const [toast, setToast] = useState(null);
@@ -70,7 +74,7 @@ const RecruiterView = () => {
         }
     }, [fetchAdminJobs, fetchApplicants, token]);
 
-useEffect(() => {
+    useEffect(() => {
 
     if (!token) return;
 
@@ -87,7 +91,65 @@ useEffect(() => {
 
     return () => clearInterval(interval);
 
-}, [token, fetchAdminJobs, fetchApplicants]);
+    }, [token, fetchAdminJobs, fetchApplicants]);
+
+    useEffect(() => {
+
+    const fetchAnalytics = async () => {
+
+        try {
+
+            const token = localStorage.getItem("token");
+
+            const headers = {
+                Authorization: `Bearer ${token}`
+            };
+
+            const [
+                applicants,
+                ratio,
+                skills,
+                trends
+            ] = await Promise.all([
+
+                API.get(
+                    "/api/analytics/applicants-per-job",
+                    { headers }
+                ),
+
+                API.get(
+                    "/api/analytics/acceptance-ratio",
+                    { headers }
+                ),
+
+                API.get(
+                    "/api/analytics/top-skills",
+                    { headers }
+                ),
+
+                API.get(
+                    "/api/analytics/application-trends",
+                    { headers }
+                ),
+            ]);
+
+            setApplicantsData(applicants.data);
+            setRatioData(ratio.data);
+            setSkillsData(skills.data);
+            setTrendsData(trends.data);
+
+        } catch (err) {
+
+            console.error(
+                "Analytics fetch failed:",
+                err
+            );
+        }
+    };
+
+    fetchAnalytics();
+
+    }, []);
 
     const analytics = useMemo(() => {
         const accepted = applicants.filter(
@@ -242,6 +304,30 @@ const averageMatchScore =
         )
         : 0;
 
+        // FALLBACK TRENDS DATA
+const generatedTrendsData = useMemo(() => {
+
+    const map = {};
+
+    applicants.forEach((app) => {
+
+        const date = new Date(
+            app.createdAt || Date.now()
+        ).toLocaleDateString();
+
+        map[date] = (map[date] || 0) + 1;
+
+    });
+
+    return Object.entries(map).map(
+        ([date, applications]) => ({
+            date,
+            applications
+        })
+    );
+
+}, [applicants]);
+        
         // TOP SKILLS AI Analytics
         const skillsMap = {};
 
@@ -256,7 +342,7 @@ advancedFilteredApplicants.forEach((app) => {
 
 });
 
-const skillsData = Object.entries(skillsMap)
+const skillData = Object.entries(skillsMap)
     .map(([name, value]) => ({
         name,
         value
@@ -352,18 +438,203 @@ const getResumeUrl = (filePath) => {
 
 <section className="analytics-grid">
 
-    <div className="analytics-card">
-        <strong>{analytics.jobs}</strong>
-        <span>Active Jobs</span>
+    {/* Applicants Per Job */}
+    <div className="analytics-card chart-card">
+
+        <h3>Applicants Per Job</h3>
+
+        <ResponsiveContainer width="100%" height={260}>
+            <BarChart data={applicantsData}>
+
+                <CartesianGrid strokeDasharray="3 3" />
+
+                <XAxis
+                    dataKey="jobTitle"
+                    tick={{ fontSize: 12 }}
+                />
+
+                <YAxis />
+
+                <Tooltip
+                    contentStyle={{
+                        background: "#0f172a",
+                        border: "1px solid #334155",
+                        borderRadius: "12px",
+                        color: "white"
+                    }}
+                />
+
+                <Bar
+                    dataKey="applicants"
+                    radius={[8, 8, 0, 0]}
+                >
+                    {applicantsData.map((entry, index) => (
+                        <Cell
+                            key={index}
+                            fill={
+                                SKILL_COLORS[
+                                    index % SKILL_COLORS.length
+                                ]
+                            }
+                        />
+                    ))}
+                </Bar>
+
+            </BarChart>
+        </ResponsiveContainer>
+
     </div>
 
-<button
-    className="analytics-card active-card"
-    onClick={() => setActiveRecruiterTab("all")}
->
-    <strong>{applicants.length}</strong>
-    <span>Total Applicants</span>
-</button>
+    {/* Acceptance Ratio */}
+    <div className="analytics-card chart-card">
+
+        <h3>Acceptance Ratio</h3>
+
+        <ResponsiveContainer width="100%" height={260}>
+
+            <PieChart>
+
+                <Pie
+                    data={[
+                        {
+                            name: "Accepted",
+                            value: acceptedApplications
+                        },
+                        {
+                            name: "Rejected",
+                            value: rejectedApplications
+                        },
+                        {
+                            name: "Pending",
+                            value: pendingApplications
+                        }
+                    ]}
+                    dataKey="value"
+                    outerRadius={95}
+                    innerRadius={45}
+                    paddingAngle={4}
+                    label
+                >
+
+                    <Cell fill="#22c55e" />
+                    <Cell fill="#ef4444" />
+                    <Cell fill="#f59e0b" />
+
+                </Pie>
+
+                <Tooltip
+                    contentStyle={{
+                        background: "#0f172a",
+                        border: "1px solid #334155",
+                        borderRadius: "12px",
+                        color: "white"
+                    }}
+                />
+
+                <Legend />
+
+            </PieChart>
+
+        </ResponsiveContainer>
+
+    </div>
+
+    {/* Top Skills Demand */}
+    <div className="analytics-card chart-card">
+
+        <h3>Top Skills Demand</h3>
+
+        <ResponsiveContainer width="100%" height={260}>
+
+            <BarChart data={topSkillsData}>
+
+                <CartesianGrid strokeDasharray="3 3" />
+
+                <XAxis
+                    dataKey="name"
+                    tick={{ fontSize: 12 }}
+                />
+
+                <YAxis />
+
+                <Tooltip
+                    contentStyle={{
+                        background: "#0f172a",
+                        border: "1px solid #334155",
+                        borderRadius: "12px",
+                        color: "white"
+                    }}
+                />
+
+                <Bar
+                    dataKey="value"
+                    radius={[8, 8, 0, 0]}
+                >
+                    {topSkillsData.map((entry, index) => (
+                        <Cell
+                            key={index}
+                            fill={
+                                SKILL_COLORS[
+                                    index % SKILL_COLORS.length
+                                ]
+                            }
+                        />
+                    ))}
+                </Bar>
+
+            </BarChart>
+
+        </ResponsiveContainer>
+
+    </div>
+
+    {/* Application Trends */}
+    <div className="analytics-card chart-card">
+
+        <h3>Application Trends</h3>
+
+        <ResponsiveContainer width="100%" height={260}>
+
+            <LineChart data={trendsData.length ? trendsData : generatedTrendsData}>
+
+                <CartesianGrid strokeDasharray="3 3" />
+
+                <XAxis dataKey="date" />
+
+                <YAxis />
+
+                <Tooltip
+                    contentStyle={{
+                        background: "#0f172a",
+                        border: "1px solid #334155",
+                        borderRadius: "12px",
+                        color: "white"
+                    }}
+                />
+
+                <Legend />
+
+                <Line
+                    type="monotone"
+                    dataKey="applications"
+                    stroke="#6366f1"
+                    strokeWidth={3}
+                />
+
+            </LineChart>
+
+        </ResponsiveContainer>
+
+    </div>
+
+    {/* Stats Cards */}
+    <button
+        className="analytics-card active-card"
+        onClick={() => setActiveRecruiterTab("all")}
+    >
+        <strong>{applicants.length}</strong>
+        <span>Total Applicants</span>
+    </button>
 
     <div className="analytics-card">
         <strong>{analytics.averageMatch}%</strong>
@@ -658,7 +929,7 @@ const getResumeUrl = (filePath) => {
     }}
 >
 
-    {skillsData.map((entry, index) => (
+    {skillData.map((entry, index) => (
 
         <Cell
             key={index}

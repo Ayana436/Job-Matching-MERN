@@ -6,6 +6,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 import { notFound, errorHandler } from './middleware/errorMiddleware.js';
+import analyticsRoutes from './routes/analyticsRoutes.js';
 import jobRoutes from './routes/jobRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 import { requestLogger } from './middleware/requestLogger.js';
@@ -100,7 +101,7 @@ app.use((req, res, next) => {
 // ROUTES
 app.use('/api/auth', authRoutes);
 app.use('/api/jobs', jobRoutes);
-
+app. use('/api/analytics', analyticsRoutes);
 
 // Upload folder static access
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
