@@ -417,7 +417,7 @@ const getResumeUrl = (filePath) => {
         cleanedPath = `uploads/${cleanedPath}`;
     }
 
-    return `http://localhost:5000/${cleanedPath}`;
+    return `${import.meta.env.VITE_API_URL}/${cleanedPath}`;
 };
     console.log(applicants);
 

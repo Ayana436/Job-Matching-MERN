@@ -2,7 +2,7 @@ import axios from "axios";
 import { isTokenExpired, logoutUser } from "./utils/auth";
 
 const API = axios.create({
-    baseURL: "http://localhost:5000",
+    baseURL: import.meta.env.VITE_API_URL,
 
     headers: {
         "Cache-Control":"no-cache",

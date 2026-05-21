@@ -724,7 +724,7 @@ const getResumeUrl = (filePath) => {
             `uploads/${cleanedPath.replace("uploads", "")}`;
     }
 
-    return `http://localhost:5000/${cleanedPath}`;
+    return `${import.meta.env.VITE_API_URL}/${cleanedPath}`;
 };
 
 // STATUS BADGE LOGIC
