@@ -467,22 +467,24 @@ const handleResumeUpload = async () => {
 
     const formData = new FormData();
     formData.append("resume", resume);
-
+    console.log("Resume file:", resume);
+    console.log("Resume type:", resume?.type);
+    console.log("Resume name:", resume?.name);
     try {
         setLoading(true);
 
         const token = localStorage.getItem("token");
 
         const res = await API.post(
-    "/api/jobs/match-pdf",
-    formData,
-    {
-        headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "multipart/form-data",
-        },
-    }
-);
+    "https://hire-craft.onrender.com/api/jobs/match-pdf",
+            formData,
+            {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    "Content-Type": "multipart/form-data",
+                },
+            }
+        );
         console.log(res.data);
 
         const matchedJobs = enrichJobsWithApplications(
@@ -712,21 +714,14 @@ const getResumeUrl = (filePath) => {
 
     if (!filePath) return "";
 
-    let cleanedPath = filePath
-        .replaceAll("\\", "/")
-        .trim();
+    let cleanedPath =
+        filePath.replace(/\\/g, "/");
 
-    cleanedPath = cleanedPath.replace(/^\/+/, "");
+    const filename =
+        cleanedPath.split("/").pop();
 
-    if (!cleanedPath.startsWith("uploads/")) {
-
-        cleanedPath =
-            `uploads/${cleanedPath.replace("uploads", "")}`;
-    }
-
-    return `${import.meta.env.VITE_API_URL}/${cleanedPath}`;
+    return `https://hire-craft.onrender.com/uploads/${filename}`;
 };
-
 // STATUS BADGE LOGIC
 const getStatusClass = (status) => {
 
@@ -783,7 +778,15 @@ const getTimelineStep = (status) => {
     }
 };
 
+// const viewResume = (filename) => {
 
+//     const token = localStorage.getItem("token");
+
+//     window.open(
+//         `https://hire-craft.onrender.com/api/jobs/download-resume/${filename}?token=${token}`,
+//         "_blank"
+//     );
+// };
 
     return (
         <div className={`candidate-page ${theme === "light" ? "light-mode" : ""}`}>
@@ -1007,28 +1010,63 @@ const getTimelineStep = (status) => {
             </section>
 
             <section className="resume-panel">
-                <div>
-                    <h2>Upload Resume for AI Matching</h2>
-                    <p>PDF resumes are matched against required skills and ranked by score.</p>
-                </div>
-                <div className="resume-upload-wrapper">
-                    <label className="custom-file-upload" htmlFor="choose resume pdf">
-                        Choose Resume PDF
-                        <input
-                            id="hidden-file-input"
-                            name="hidden-file-input"
-                            className="hidden-file-input"
-                            type="file"
-                            accept=".pdf"
-                            onChange={(e) => setResume(e.target.files?.[0] || null)}
-                        />
-                    </label>
-                    <span className="selected-file-name">{resume ? resume.name : "No file selected"}</span>
-                    <button className="success-btn" disabled={loading} onClick={handleResumeUpload}>
-                        {loading ? "Analyzing..." : "Upload & Match"}
-                    </button>
-                </div>
-            </section>
+    <div>
+        <h2>Upload Resume for AI Matching</h2>
+
+        <p>
+            PDF resumes are matched against required skills
+            and ranked by score.
+        </p>
+    </div>
+
+    <div className="resume-upload-wrapper">
+
+        <label
+            className="custom-file-upload"
+            htmlFor="hidden-file-input"
+        >
+            Choose Resume PDF
+        </label>
+
+        <input
+            id="hidden-file-input"
+            name="resume"
+            className="hidden-file-input"
+            type="file"
+            accept=".pdf"
+            onChange={(e) => {
+                console.log("FILE CHANGED");
+
+                const file = e.target.files?.[0];
+
+                console.log(file);
+
+                setResume(file || null);
+            }}
+        />
+
+        <span className="selected-file-name">
+            {resume
+                ? resume.name
+                : "No file selected"}
+        </span>
+
+        <button
+            type="button"
+            className="success-btn"
+            disabled={loading}
+            onClick={() => {
+                console.log("UPLOAD BUTTON CLICKED");
+                handleResumeUpload();
+            }}
+        >
+            {loading
+                ? "Analyzing..."
+                : "Upload & Match"}
+        </button>
+
+    </div>
+</section>
 
 <section className="resume-history-panel">
 
@@ -1090,62 +1128,54 @@ const getTimelineStep = (status) => {
         }}
     >
 
-        <button
-            onClick={() => {
+<button
+    className="primary-btn"
+    onClick={() => {
 
-                window.open(
-                    getResumeUrl(
-                        resumeItem.filePath
-                    ),
-                    "_blank"
-                );
+        const resumeUrl = getResumeUrl(
+            resumeItem.filePath
+        );
 
-            }}
-            style={{
-                background: "#1e293b",
-                color: "white",
-                border: "1px solid #334155",
-                padding: "6px 12px",
-                borderRadius: "6px",
-                cursor: "pointer"
-            }}
-        >
-            View Resume
-        </button>
+        console.log("OPENING:", resumeUrl);
 
-        <button
-            onClick={() => {
+        window.open(
+            `${resumeUrl}#toolbar=1&navpanes=0&scrollbar=1`,
+            "_blank"
+        );
+    }}
+    style={{
+        background: "#1e293b",
+        color: "white",
+        border: "1px solid #334155",
+        padding: "6px 12px",
+        borderRadius: "6px",
+        cursor: "pointer"
+    }}
+>
+    View Resume
+</button>
 
-                const link =
-                    document.createElement("a");
+<button
+    onClick={() => {
 
-                link.href =
-                    getResumeUrl(
-                        resumeItem.filePath
-                    );
+        const resumeUrl = getResumeUrl(
+            resumeItem.filePath
+        );
 
-                link.download =
-                    resumeItem.fileName ||
-                    "resume.pdf";
+        window.open(resumeUrl, "_blank");
 
-                document.body.appendChild(link);
-
-                link.click();
-
-                document.body.removeChild(link);
-
-            }}
-            style={{
-                background: "#4caf5022",
-                color: "#4caf50",
-                border: "1px solid #4caf50",
-                padding: "6px 12px",
-                borderRadius: "6px",
-                cursor: "pointer"
-            }}
-        >
-            Download Resume
-        </button>
+    }}
+    style={{
+        background: "#4caf5022",
+        color: "#4caf50",
+        border: "1px solid #4caf50",
+        padding: "6px 12px",
+        borderRadius: "6px",
+        cursor: "pointer"
+    }}
+>
+    Download Resume
+</button>
 
     </div>
 

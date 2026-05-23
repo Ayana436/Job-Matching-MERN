@@ -1,8 +1,9 @@
 import express from 'express';
+import path from 'path';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
-import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 
 import { notFound, errorHandler } from './middleware/errorMiddleware.js';
@@ -11,58 +12,70 @@ import jobRoutes from './routes/jobRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 import { requestLogger } from './middleware/requestLogger.js';
 
-// ES MODULE FIX
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// ENV
 dotenv.config({ path: path.resolve(__dirname, 'config.env') });
 dotenv.config({ path: path.resolve(__dirname, '.env') });
 
 const app = express();
+
 let isDbConnected = false;
 let isConnectingDb = false;
 
-// MIDDLEWARES
 app.use(cors({
     origin: [
         "http://localhost:5173",
         "https://hirecraft-orpin.vercel.app"
     ],
     credentials: true
-    }));
+}));
+
 app.use(express.json());
 app.use(requestLogger);
 
-
-
-// DEBUG LOGS
 console.log('--- System Diagnostics ---');
 console.log('Current Directory:', __dirname);
 console.log('Mongo URI Found:', process.env.MONGO_URI ? 'YES' : 'NO');
 console.log('--------------------------');
 
-// DB CONNECTION
+const uploadsPath = path.join(__dirname, "uploads");
+
+if (!fs.existsSync(uploadsPath)) {
+    fs.mkdirSync(uploadsPath, { recursive: true });
+}
+
+app.use(
+    "/uploads",
+    express.static(uploadsPath)
+);
+
 const getMongoUris = () => [
     process.env.MONGO_URI,
     process.env.MONGO_URI_DIRECT
 ].filter(Boolean);
 
 const connectDB = async () => {
+
     if (isConnectingDb || isDbConnected) return;
+
     isConnectingDb = true;
 
     try {
+
         const mongoUris = getMongoUris();
+
         if (mongoUris.length === 0) {
-            throw new Error('MONGO_URI is missing. Add it to backend/config.env or backend/.env');
+            throw new Error(
+                'MONGO_URI missing'
+            );
         }
 
         let lastError;
+
         for (const uri of mongoUris) {
+
             try {
-                const connectionType = uri.startsWith('mongodb+srv://') ? 'SRV' : 'direct';
-                console.log(`Trying MongoDB ${connectionType} connection...`);
 
                 await mongoose.connect(uri, {
                     serverSelectionTimeoutMS: 8000
@@ -70,43 +83,66 @@ const connectDB = async () => {
 
                 lastError = null;
                 break;
+
             } catch (err) {
+
                 lastError = err;
-                await mongoose.disconnect().catch(() => {});
+
+                await mongoose.disconnect()
+                    .catch(() => {});
+
             }
         }
 
         if (lastError) throw lastError;
 
         isDbConnected = true;
-        console.log('MongoDB Connected Successfully');
+
+        console.log(
+            'MongoDB Connected Successfully'
+        );
+
     } catch (err) {
+
         isDbConnected = false;
-        console.error('MongoDB Connection Failed:', err.message);
-        console.error('API is still running, but database-backed routes will return 503 until MongoDB is reachable.');
+
+        console.error(
+            'MongoDB Connection Failed:',
+            err.message
+        );
+
     } finally {
+
         isConnectingDb = false;
     }
 };
 
 connectDB();
+
 setInterval(connectDB, 10000);
 
 app.use((req, res, next) => {
-    if (req.path === '/' || req.path === '/api/health') return next();
+
+    if (
+        req.path === '/' ||
+        req.path === '/api/health' ||
+        req.path.startsWith('/uploads')
+    ) {
+        return next();
+    }
 
     if (!isDbConnected) {
+
         return res.status(503).json({
-            error: 'Database unavailable. Check MongoDB Atlas/network connection. The backend retries automatically every 30 seconds.'
+            error: 'Database unavailable'
         });
     }
 
     next();
 });
 
-// ROUTES
-// BASE ROUTE
 app.get('/', (req, res) => {
+
     res.status(200).json({
         success: true,
         message: 'Job Matching API Running Successfully',
@@ -115,31 +151,31 @@ app.get('/', (req, res) => {
 });
 
 app.get('/api/health', (req, res) => {
-    res.status(isDbConnected ? 200 : 503).json({
-        api: 'running',
-        database: isDbConnected ? 'connected' : 'unavailable'
-    });
+
+    res.status(isDbConnected ? 200 : 503)
+        .json({
+            api: 'running',
+            database: isDbConnected
+                ? 'connected'
+                : 'unavailable'
+        });
 });
 
-app. use('/api/analytics', analyticsRoutes);
-
+app.use('/api/analytics', analyticsRoutes);
 
 app.use('/api/auth', authRoutes);
+
 app.use('/api/jobs', jobRoutes);
 
-
-
-// Upload folder static access
-app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
-
 app.use(notFound);
+
 app.use(errorHandler);
 
-
-
-// START SERVER
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+
+    console.log(
+        `Server running on http://localhost:${PORT}`
+    );
 });

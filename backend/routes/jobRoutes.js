@@ -17,9 +17,9 @@ const router = express.Router();
 
 
 // Ensure upload directory exists
-const uploadDir = 'uploads/';
+const uploadDir = path.join(process.cwd(), 'uploads');
 if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir);
+    fs.mkdirSync(uploadDir, {recursive: true});
 }
 
 // 1. Storage Configuration
@@ -316,12 +316,7 @@ res.status(200).json(sortedMatches);
     } catch (err) {
         console.error("PDF Parsing Error:", err);
         // Clean up file even if parsing fails
-        if (req.file && fs.unlinkSync(req.file.path)){
-            fs.unlinkSync(req.file.path);
-        }
-        res.status(500).json({ error: "Server failed to process PDF" });
-    }
-});
+};
 
 // --- 3. CRUD OPERATIONS ---
     // ONLY Recruiters can POST
@@ -729,6 +724,7 @@ router.get(
     '/download-resume/:filename',
     protect,
     async (req, res) => {
+
         try {
 
             const filePath = path.join(
@@ -737,25 +733,25 @@ router.get(
                 req.params.filename
             );
 
-            // check file exists
             if (!fs.existsSync(filePath)) {
+
                 return res.status(404).json({
                     error: 'Resume not found'
                 });
             }
 
-            // force download
-            res.download(filePath);
+            return res.sendFile(filePath);
 
         } catch (err) {
 
             console.error(
-                'Download resume error:',
+                'Resume view error:',
                 err
             );
 
             res.status(500).json({
-                error: 'Failed to download resume'
+                error:
+                    'Failed to open resume'
             });
         }
     }
