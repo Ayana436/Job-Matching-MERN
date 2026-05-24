@@ -10,6 +10,7 @@ import sendEmail from '../utils/sendEmail.js';
 import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs';
 import { calculateSimilarity, preprocessText } from '../utils/nlpUtils.js';
 import { authorize, protect } from '../middleware/authMiddleware.js';
+import { deleteResume } from '../controllers/userController.js';
 
 const router = express.Router();
 
@@ -34,7 +35,11 @@ const storage = multer.diskStorage({
 
 // 2. File Filter (PDF only)
 const fileFilter = (req, file, cb) => {
-    if (file.mimetype === 'application/pdf') {
+    const isPdf =
+    file.mimetype === "application/pdf" &&
+    path.extname(file.originalname).toLowerCase() === ".pdf";
+
+    if (isPdf) {
         cb(null, true);
     } else {
         cb(new Error('Invalid file type. Only PDFs are allowed!'), false);
@@ -315,8 +320,17 @@ res.status(200).json(sortedMatches);
 
     } catch (err) {
         console.error("PDF Parsing Error:", err);
-        // Clean up file even if parsing fails
-};
+
+        // delete broken upload if needed
+        if (req.file?.path && fs.existsSync(req.file.path)) {
+            fs.unlinkSync(req.file.path);
+        }
+
+        return res.status(500).json({
+            error: "Failed to process PDF"
+})
+}
+});
 
 // --- 3. CRUD OPERATIONS ---
     // ONLY Recruiters can POST
@@ -652,8 +666,7 @@ router.patch(
                     </p>
 
                     <p>
-                        The recruiter will contact
-                        you soon.
+                        The recruiter will contact you soon.
                     </p>
                 `;
             }
@@ -756,5 +769,19 @@ router.get(
         }
     }
 );
+
+router.get(
+    "/debug-user",
+    protect,
+    async (req, res) => {
+
+        res.json({
+            user: req.user
+        });
+    }
+);
+
+// Delete uploaded pdf
+router.delete('/resume', protect, authorize('candidate'), deleteResume);
 
 export default router;

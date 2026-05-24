@@ -140,6 +140,130 @@ const JobCard = ({
                 </div>
             </div>
 
+            {/* AI EXPLANATION SECTION */}
+
+{job.matchScore > 0 && (
+
+<div className="ai-explanation-box">
+
+    <div className="ai-explanation-header">
+        <h4>AI Match Analysis</h4>
+
+        <span className="confidence-badge">
+            {job.confidence || job.matchScore}% Confidence
+        </span>
+    </div>
+
+    <p className="ai-ranking-reason">
+        {job.rankingReason ||
+            "This job matches your uploaded resume based on skills and semantic relevance."}
+    </p>
+
+    {/* MATCHED SKILLS */}
+    {job.matchedSkills?.length > 0 && (
+
+        <div className="skills-section">
+
+            <h5>Matched Skills</h5>
+
+            <div className="skills-tags">
+
+                {job.matchedSkills.map((skill, index) => (
+
+                <div
+                    key={index}
+                    className="skill-tag matched"
+                >
+                    {skill}
+                </div>
+
+                ))}
+
+            </div>
+
+        </div>
+    )}
+
+    {/* MISSING SKILLS */}
+    {job.missingSkills?.length > 0 && (
+
+        <div className="skills-section">
+
+            <h5>Missing Skills</h5>
+
+            <div className="skills-tags">
+
+                {job.missingSkills
+                    .slice(0, 5)
+                    .map((skill, index) => (
+
+                    <div
+                            key={index}
+                            className="skill-tag missing"
+                        >
+                            {skill}
+                        </div>
+
+                ))}
+
+            </div>
+
+        </div>
+    )}
+
+    {/* SCORE BARS */}
+
+    <div className="score-breakdown">
+
+        <div className="score-item">
+
+            <span>Skill Match</span>
+
+            <div className="score-bar">
+
+                <div
+                    className="score-fill skill-fill"
+                    style={{
+                        width: `${job.skillScore || 0}%`
+                    }}
+                />
+
+            </div>
+
+            <strong>
+                {job.skillScore || 0}%
+            </strong>
+
+        </div>
+
+        <div className="score-item">
+
+            <span>Semantic Match</span>
+
+            <div className="score-bar">
+
+                <div
+                    className="score-fill semantic-fill"
+                    style={{
+                        width: `${job.semanticScore || 0}%`
+                    }}
+                />
+
+            </div>
+
+            <strong>
+                {job.semanticScore || 0}%
+            </strong>
+
+        </div>
+
+    </div>
+
+</div>
+
+)}
+
+
             {(job.matchedSkills?.length > 0 ||
                 job.missingSkills?.length > 0) && (
 

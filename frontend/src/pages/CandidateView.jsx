@@ -4,9 +4,9 @@ import API from "../api";
 import JobCard from "../components/JobCard";
 
 
-const token = localStorage.getItem("token");
+// const token = localStorage.getItem("token");
 
-const user = JSON.parse(localStorage.getItem("user"));
+// const user = JSON.parse(localStorage.getItem("user"));
 
 const defaultChips = [
     "AI",
@@ -78,7 +78,7 @@ const enrichJobsWithApplications = (jobList, applications = []) => {
 };
 
 const CandidateView = () => {
-    console.log("CandidateView rendered");
+    // console.log("CandidateView rendered");
     const navigate = useNavigate();
     const user = getStoredJson("user", null);
     const userId = user?.id || user?._id;
@@ -201,8 +201,8 @@ useEffect(() => {
     let isMounted = true;
 
     const loadInitialData = async () => {
-        console.log("INITIAL FETCH RUNNING")
-        if (hasMatchedResults) return;
+        // console.log("INITIAL FETCH RUNNING")
+        // if (hasMatchedResults) return;
 
         setJobsLoading(true);
 
@@ -253,7 +253,7 @@ setJobs(enrichedJobs);
 
     fetchResumeHistory();
 
-    console.log("iFR")
+    // console.log("iFR")
 
     return () => {
         isMounted = false;
@@ -571,6 +571,50 @@ const toggleSavedJob = (jobId) => {
         localStorage.removeItem("user");
         navigate("/auth");
     };
+
+const handleDeleteResume = async () => {
+
+    try {
+
+        const token =
+            localStorage.getItem("token");
+
+        console.log("DELETE TOKEN:", token);
+
+        const response = await API.delete(
+            "/api/jobs/resume",
+            {
+                headers: {
+                    Authorization:
+                        `Bearer ${token}`
+                }
+            }
+        );
+
+        console.log(response.data);
+
+        setResume(null);
+
+        setMatchedJobs([]);
+
+        notify(
+            "Resume deleted successfully"
+        );
+
+    } catch (err) {
+
+        console.error(
+            "DELETE ERROR:",
+            err.response?.data || err
+        );
+
+        notify(
+            err.response?.data?.message ||
+            "Failed to delete resume",
+            "error"
+        );
+    }
+};
 
         const pendingJobs = applications.filter(
             (app) =>
@@ -1056,7 +1100,7 @@ const getTimelineStep = (status) => {
             className="success-btn"
             disabled={loading}
             onClick={() => {
-                console.log("UPLOAD BUTTON CLICKED");
+                // console.log("UPLOAD BUTTON CLICKED");
                 handleResumeUpload();
             }}
         >
@@ -1136,7 +1180,7 @@ const getTimelineStep = (status) => {
             resumeItem.filePath
         );
 
-        console.log("OPENING:", resumeUrl);
+        // console.log("OPENING:", resumeUrl);
 
         window.open(
             `${resumeUrl}#toolbar=1&navpanes=0&scrollbar=1`,
@@ -1176,6 +1220,7 @@ const getTimelineStep = (status) => {
 >
     Download Resume
 </button>
+<button className="delete-resume-btn" onClick={handleDeleteResume}>Delete Resume</button>
 
     </div>
 

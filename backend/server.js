@@ -5,11 +5,12 @@ import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
+import rateLimit from 'express-rate-limit';
 
 import { notFound, errorHandler } from './middleware/errorMiddleware.js';
 import analyticsRoutes from './routes/analyticsRoutes.js';
-import jobRoutes from './routes/jobRoutes.js';
 import authRoutes from './routes/authRoutes.js';
+import jobRoutes from './routes/jobRoutes.js';
 import { requestLogger } from './middleware/requestLogger.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -19,6 +20,14 @@ dotenv.config({ path: path.resolve(__dirname, 'config.env') });
 dotenv.config({ path: path.resolve(__dirname, '.env') });
 
 const app = express();
+
+const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 100,
+    message: "Too many requests. Please try again later."
+});
+
+app.use(limiter);
 
 let isDbConnected = false;
 let isConnectingDb = false;
@@ -166,6 +175,14 @@ app.use('/api/analytics', analyticsRoutes);
 app.use('/api/auth', authRoutes);
 
 app.use('/api/jobs', jobRoutes);
+
+process.on("unhandledRejection", (err) => {
+    console.error("UNHANDLED REJECTION:", err);
+});
+
+process.on("uncaughtException", (err) => {
+    console.error("UNCAUGHT EXCEPTION:", err);
+});
 
 app.use(notFound);
 

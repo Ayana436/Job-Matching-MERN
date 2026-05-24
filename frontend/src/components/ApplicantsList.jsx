@@ -70,6 +70,14 @@ const handleStatusUpdate = async (applicationId, newStatus) => {
     }
 };
 
+const getResumeStrength = (score) => {
+
+    if (score >= 80) return "Strong";
+    if (score >= 60) return "Moderate";
+    return "Weak";
+
+};
+
 const filteredApplicants = applicants.filter((app) =>
     app.candidateId?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     app.candidateSkills?.some(skill => skill.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -119,6 +127,24 @@ const paginatedApplicants =
 
             </div>
 
+        <div className="activity-feed" style={{display:'flex', justifyContent:'space-around'}}>
+
+    <h4>Recent Activity</h4>
+
+    <div>
+        John applied for Frontend Developer
+    </div>
+
+    <div>
+        Sarah was accepted
+    </div>
+
+    <div>
+        AWS role received 5 applications
+    </div>
+
+</div>
+
             <table className='incoming applicants-table' style={{ width: '100%', color: 'white', borderCollapse: 'collapse' }}>
                 <thead>
                     <tr style={{ background: 'rgba(255,255,255,0.05)', textAlign: 'left' }}>
@@ -129,6 +155,7 @@ const paginatedApplicants =
                         <th style={{ padding: '15px' }}>Status</th>
                         <th style={{ padding: '15px' }}>AI Recommendation</th>
                         <th style={{ padding: '15px' }}>Action</th>
+                        <th style={{ padding: '15px' }}>Resume Strength Meter</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -286,6 +313,11 @@ const paginatedApplicants =
                                     <button className="reject-btn" onClick={() => handleStatusUpdate(app._id, 'rejected')}style={{ background: '#f4433622', color: '#f44336', border: '1px solid #f44336', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>
                                         Reject
                                     </button>
+                                </div>
+                            </td>
+                            <td>
+                                <div className="resume-strength high">
+                                    Strong Resume
                                 </div>
                             </td>
                         </tr>

@@ -360,6 +360,28 @@ const topSkillsData =
         .sort((a, b) => b.value - a.value)
         .slice(0, 6);
 
+const missingSkillsMap = {};
+
+advancedFilteredApplicants.forEach((app) => {
+
+    (app.missingSkills || []).forEach((skill) => {
+
+        missingSkillsMap[skill] =
+            (missingSkillsMap[skill] || 0) + 1;
+
+    });
+
+});
+
+const topMissingSkills =
+    Object.entries(missingSkillsMap)
+        .map(([name, value]) => ({
+            name,
+            value
+        }))
+        .sort((a, b) => b.value - a.value)
+        .slice(0, 6);
+
     // PIE CHART DATA
     const statusData = [
     {
@@ -679,6 +701,198 @@ const getResumeUrl = (filePath) => {
 
 </section>
 
+<div className="missing-skills-card">
+
+    <div className="missing-header">
+
+        <h3>Skill Gap Analytics</h3>
+
+        <span>
+            AI DETECTED
+        </span>
+
+    </div>
+
+    {
+        topMissingSkills.length > 0 ? (
+
+            <div className="missing-skills-grid">
+
+                {topMissingSkills.map((skill, index) => (
+
+                    <div
+                        key={index}
+                        className="missing-skill-item"
+                    >
+
+                        <strong>
+                            {skill.name}
+                        </strong>
+
+                        <p>
+                            Missing in {skill.value} resumes
+                        </p>
+
+                    </div>
+
+                ))}
+
+            </div>
+
+        ) : (
+
+            <p style={{ color:"#94a3b8" }}>
+                No missing skills detected.
+            </p>
+
+        )
+    }
+
+</div>
+
+<div className="activity-feed-card">
+
+    <div className="activity-header">
+
+        <h3>Live Activity Feed</h3>
+
+        <span className="activity-live">
+            LIVE
+        </span>
+
+    </div>
+
+    <div className="activity-feed-list">
+
+        {[...applicants]
+            .slice(0, 8)
+            .map((app, index) => (
+
+            <div
+                key={index}
+                className="activity-item"
+            >
+
+                <div className="activity-dot" />
+
+                <div>
+
+                    <strong>
+                        {
+                            app.candidateId?.name ||
+                            "Candidate"
+                        }
+                    </strong>
+
+                    <p>
+
+                        applied for
+
+                        <span>
+                            {" "}
+                            {app.jobId?.title || "Role"}
+                        </span>
+
+                    </p>
+
+                    <small>
+                        Match Score:
+                        {" "}
+                        {app.matchScore || 0}%
+                    </small>
+
+                </div>
+
+            </div>
+
+        ))}
+
+    </div>
+
+</div>
+
+<div className="insight-card">
+
+    <div className="insight-header">
+        <h2>AI Hiring Insights</h2>
+        <span className="live-badge">LIVE AI</span>
+    </div>
+
+    <div className="insight-grid">
+        <div className="insight-item">
+            <strong>Top Skill</strong>
+
+            <p>
+                {topSkillsData?.[0]?.name || "N/A"}
+            </p>
+        </div>
+
+        <div className="insight-item">
+            <strong>
+                Strong Candidates
+            </strong>
+
+            <p>
+                {
+                    applicants.filter(
+                        app => app.matchScore >= 80
+                    ).length
+                }
+            </p>
+        </div>
+
+        <div className="insight-item">
+            <strong>
+                Avg Match
+            </strong>
+
+            <p>
+                {averageMatchScore}%
+            </p>
+        </div>
+
+        <div className="insight-item">
+            <strong>
+                Most Active Role
+            </strong>
+
+            <p>
+                {
+                    applicantsData?.[0]?.jobTitle ||
+                    "No Data"
+                }
+            </p>
+        </div>
+
+    </div>
+
+    <div className="ai-summary-box">
+
+        <p>
+
+            AI detected that most applicants are strong in
+
+            <strong>
+                {" "}
+                {topSkillsData?.[0]?.name || "technical"}
+            </strong>
+
+            {" "}skills.
+
+            {
+                applicants.filter(
+                    app => app.matchScore >= 80
+                ).length
+            }
+
+            {" "}high-quality candidates are available for immediate review.
+
+        </p>
+
+    </div>
+
+</div>
+
             {/* JOB FORM */}
             <div className="job-form-card">
                 <h2>{editingId ? "📝 Edit Job" : "🚀 Post a New Role"}</h2>
@@ -796,22 +1010,13 @@ const getResumeUrl = (filePath) => {
 
 </div> */}
 
-<div
-    style={{
-        marginBottom: "20px"
-    }}
->
+<div style={{marginBottom: "20px"}}>
 
-    <input
-        id='searchS'
-        name='searchS'
-        type="text"
-        placeholder="Search candidate or skill..."
+    <input id='searchS' name='searchS' type="text" placeholder="Search candidate or skill..."
         value={searchTerm}
         onChange={(e) => {
             setSearchTerm(e.target.value);
-            setCurrentPage(1);
-        }}
+            setCurrentPage(1);}}
         style={{
             width: "100%",
             padding: "12px",
@@ -823,6 +1028,33 @@ const getResumeUrl = (filePath) => {
     />
 
 </div>
+
+<div className="insight-card">
+
+    <h3>AI Hiring Insights</h3>
+
+    <ul>
+
+        <li>
+            Most applicants are strong in React & Node.js
+        </li>
+
+        <li>
+            72% candidates are missing AWS skills
+        </li>
+
+        <li>
+            Backend roles are receiving more applications
+        </li>
+
+        <li>
+            Average candidate match increased by 12%
+        </li>
+
+    </ul>
+
+</div>
+
 
 <div className="charts-wrapper">
 

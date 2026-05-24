@@ -1518,6 +1518,7 @@ box-shadow: 0 0 20px rgba(202, 204, 228, 0.153);
     color: #a5b4fc;
     font-weight: 800;
     text-transform: uppercase;
+    margin-top: 10px;
 }
 
 .match-stack {
