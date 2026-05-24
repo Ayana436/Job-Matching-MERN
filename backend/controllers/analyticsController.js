@@ -1,17 +1,22 @@
 import Application from "../models/Application.js";
 import Job from "../models/Job.js";
 
+const getVisibleJobs = (req) => {
+    if (req.user.role === "admin") {
+        return Job.find({});
+    }
+
+    return Job.find({
+        postedBy: req.user.id
+    });
+};
 
 // APPLICANTS PER JOB
 export const getApplicantsPerJob = async (req, res) => {
 
     try {
 
-        const recruiterId = req.user.id;
-
-        const jobs = await Job.find({
-            recruiterId
-        });
+        const jobs = await getVisibleJobs(req);
 
         const result = await Promise.all(
 
@@ -46,11 +51,7 @@ export const getAcceptanceRatio = async (req, res) => {
 
     try {
 
-        const recruiterId = req.user.id;
-
-        const jobs = await Job.find({
-            recruiterId
-        });
+        const jobs = await getVisibleJobs(req);
 
         const jobIds = jobs.map(job => job._id);
 
@@ -73,11 +74,17 @@ export const getAcceptanceRatio = async (req, res) => {
             status: "pending"
         });
 
+        const reviewed = await Application.countDocuments({
+            jobId: { $in: jobIds },
+            status: "reviewed"
+        });
+
         res.json({
             total,
             accepted,
             rejected,
-            pending
+            pending,
+            reviewed
         });
 
     } catch (err) {
@@ -96,17 +103,13 @@ export const getTopSkills = async (req, res) => {
 
     try {
 
-        const recruiterId = req.user.id;
-
-        const jobs = await Job.find({
-            recruiterId
-        });
+        const jobs = await getVisibleJobs(req);
 
         const skillMap = {};
 
         jobs.forEach(job => {
 
-            const skills = job.skillsRequired || [];
+            const skills = job.requiredSkills || [];
 
             skills.forEach(skill => {
 
@@ -118,7 +121,9 @@ export const getTopSkills = async (req, res) => {
         const result = Object.entries(skillMap)
             .map(([skill, count]) => ({
                 skill,
-                count
+                count,
+                name: skill,
+                value: count
             }))
             .sort((a, b) => b.count - a.count)
             .slice(0, 10);
@@ -141,11 +146,7 @@ export const getApplicationTrends = async (req, res) => {
 
     try {
 
-        const recruiterId = req.user.id;
-
-        const jobs = await Job.find({
-            recruiterId
-        });
+        const jobs = await getVisibleJobs(req);
 
         const jobIds = jobs.map(job => job._id);
 
@@ -167,7 +168,7 @@ export const getApplicationTrends = async (req, res) => {
         const result = Object.entries(trends).map(
             ([date, count]) => ({
                 date,
-                count
+                applications: count
             })
         );
 

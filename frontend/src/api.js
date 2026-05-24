@@ -2,28 +2,24 @@ import axios from "axios";
 import { isTokenExpired, logoutUser } from "./utils/auth";
 
 const API = axios.create({
-    baseURL: import.meta.env.VITE_API_URL,
-
-    headers: {
-        "Cache-Control":"no-cache",
-        Pragma: "no-cache",
-        Expires: "0"
-    }
+    baseURL: import.meta.env.VITE_API_URL || "http://localhost:5000",
+    timeout: 10000
 });
 
 API.interceptors.request.use((req) => {
     const token = localStorage.getItem("token");
 
     if (token) {
-        if (isTokenExpired(token)){
+        if (isTokenExpired(token)) {
             logoutUser();
             return Promise.reject("Token expired");
         }
+
         req.headers.Authorization = `Bearer ${token}`;
     }
+
     return req;
-}, (error) => Promise.reject(error)
-);
+}, (error) => Promise.reject(error));
 
 API.interceptors.response.use((response) => response,
 (error) =>{

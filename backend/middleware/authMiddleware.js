@@ -1,6 +1,9 @@
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 
+// JWT Secret Logic
+const getJwtSecret = () => process.env.JWT_SECRET || "your_secret_key";
+
 export const protect = async (req, res, next) => {
 
     try {
@@ -18,10 +21,8 @@ export const protect = async (req, res, next) => {
             const decoded =
                 jwt.verify(
                     token,
-                    process.env.JWT_SECRET
+                    getJwtSecret()
                 );
-
-            console.log("DECODED:", decoded);
 
             const user =
                 await User.findById(decoded.id)
@@ -41,8 +42,6 @@ export const protect = async (req, res, next) => {
                 email: user.email
             };
 
-            console.log("REQ.USER:", req.user);
-
             return next();
         }
 
@@ -52,10 +51,7 @@ export const protect = async (req, res, next) => {
 
     } catch (err) {
 
-        console.error(
-            "AUTH ERROR:",
-            err
-        );
+        console.error("AUTH ERROR:", err.message);
 
         return res.status(401).json({
             error: "Token failed"
@@ -66,9 +62,6 @@ export const protect = async (req, res, next) => {
 export const authorize = (...roles) => {
 
     return (req, res, next) => {
-
-        console.log("AUTHORIZE ROLE:", req.user?.role);
-        console.log("ALLOWED:", roles);
 
         if (
             !roles.includes(req.user.role)

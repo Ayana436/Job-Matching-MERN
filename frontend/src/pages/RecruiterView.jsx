@@ -4,6 +4,7 @@ import { BarChart, Bar, PieChart, Pie, Cell, LineChart, Line, Tooltip, Responsiv
 import API from '../api';
 
 
+// Basic recruiter dashboard logic
 const RecruiterView = () => {
     const navigate = useNavigate();
     const [formData, setFormData] = useState({
@@ -13,10 +14,7 @@ const RecruiterView = () => {
     const [jobs, setJobs] = useState([]);
     const [applicants, setApplicants] = useState([]);
     const [applicantsData, setApplicantsData] = useState([]);
-    const [ratioData, setRatioData] = useState(null);
-    const [skillsData, setSkillsData] = useState([]);
     const [trendsData, setTrendsData] = useState([]);
-    const [visibleApplicants, setVisibleApplicants] = useState(6);
     const [editingId, setEditingId] = useState(null);
     const [toast, setToast] = useState(null);
     const [activeRecruiterTab, setActiveRecruiterTab] = useState("all");
@@ -107,23 +105,11 @@ const RecruiterView = () => {
 
             const [
                 applicants,
-                ratio,
-                skills,
                 trends
             ] = await Promise.all([
 
                 API.get(
                     "/api/analytics/applicants-per-job",
-                    { headers }
-                ),
-
-                API.get(
-                    "/api/analytics/acceptance-ratio",
-                    { headers }
-                ),
-
-                API.get(
-                    "/api/analytics/top-skills",
                     { headers }
                 ),
 
@@ -134,8 +120,6 @@ const RecruiterView = () => {
             ]);
 
             setApplicantsData(applicants.data);
-            setRatioData(ratio.data);
-            setSkillsData(skills.data);
             setTrendsData(trends.data);
 
         } catch (err) {
@@ -276,57 +260,52 @@ const paginatedApplicants =
         }
     };
 
-    // Analytics variables
-    const totalApplications = applicants.length;
+    const acceptedApplications =
+        applicants.filter(
+            app => String(app.status).toLowerCase() === "accepted"
+        ).length;
 
-const acceptedApplications =
-    applicants.filter(
-        app => String(app.status).toLowerCase() === "accepted"
-    ).length;
+    const rejectedApplications =
+        applicants.filter(
+            app => String(app.status).toLowerCase() === "rejected"
+        ).length;
 
-const rejectedApplications =
-    applicants.filter(
-        app => String(app.status).toLowerCase() === "rejected"
-    ).length;
+    const pendingApplications =
+        applicants.filter(
+            app => String(app.status).toLowerCase() === "pending"
+        ).length;
 
-const pendingApplications =
-    applicants.filter(
-        app => String(app.status).toLowerCase() === "pending"
-    ).length;
+    const reviewedApplications =
+        applicants.filter(
+            app => String(app.status).toLowerCase() === "reviewed"
+        ).length;
 
-const averageMatchScore =
-    applicants.length > 0
-        ? Math.round(
-            applicants.reduce(
-                (sum, app) => sum + (app.matchScore || 0),
-                0
-            ) / applicants.length
-        )
-        : 0;
+    const averageMatchScore =
+        applicants.length > 0
+            ? Math.round(
+                applicants.reduce(
+                    (sum, app) => sum + (app.matchScore || 0),
+                    0
+                ) / applicants.length
+            )
+            : 0;
 
-        // FALLBACK TRENDS DATA
-const generatedTrendsData = useMemo(() => {
+    const generatedTrendsData = useMemo(() => {
+        const map = {};
 
-    const map = {};
+        applicants.forEach((app) => {
+            const date = app.createdAt
+                ? new Date(app.createdAt).toLocaleDateString()
+                : new Date().toLocaleDateString();
 
-    applicants.forEach((app) => {
+            map[date] = (map[date] || 0) + 1;
+        });
 
-        const date = new Date(
-            app.createdAt || Date.now()
-        ).toLocaleDateString();
-
-        map[date] = (map[date] || 0) + 1;
-
-    });
-
-    return Object.entries(map).map(
-        ([date, applications]) => ({
+        return Object.entries(map).map(([date, applications]) => ({
             date,
             applications
-        })
-    );
-
-}, [applicants]);
+        }));
+    }, [applicants]);
         
         // TOP SKILLS AI Analytics
         const skillsMap = {};
@@ -395,6 +374,10 @@ const topMissingSkills =
     {
         name: "Pending",
         value: pendingApplications
+    },
+    {
+        name: "Reviewed",
+        value: reviewedApplications
     }
 ];
 
@@ -402,6 +385,7 @@ const STATUS_COLORS = [
     "#22c55e", // accepted
     "#ef4444", // rejected
     "#f59e0b", // pending
+    "#3b82f6", // reviewed
 ];
 
 const SKILL_COLORS = [
@@ -529,6 +513,10 @@ const getResumeUrl = (filePath) => {
                         {
                             name: "Pending",
                             value: pendingApplications
+                        },
+                        {
+                            name: "Reviewed",
+                            value: reviewedApplications
                         }
                     ]}
                     dataKey="value"

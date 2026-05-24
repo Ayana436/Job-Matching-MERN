@@ -47,7 +47,7 @@ function App() {
                 <Route
                     path="/admin"
                     element={
-                        <ProtectedRoute allowedRole="recruiter">
+                        <ProtectedRoute allowedRole={["recruiter", "admin"]}>
                             <RecruiterView />
                         </ProtectedRoute>
                     }
@@ -56,7 +56,7 @@ function App() {
                 <Route
                     path="/admin/applicants"
                     element={
-                        <ProtectedRoute allowedRole="recruiter">
+                        <ProtectedRoute allowedRole={["recruiter", "admin"]}>
                             <ApplicantsList />
                         </ProtectedRoute>
                     }

@@ -21,6 +21,20 @@ dotenv.config({ path: path.resolve(__dirname, '.env') });
 
 const app = express();
 
+let isDbConnected = false;
+let isConnectingDb = false;
+
+const corsOptions = {
+    origin: [
+        "http://localhost:5173",
+        "https://hirecraft-orpin.vercel.app"
+    ],
+    credentials: true
+};
+
+app.use(cors(corsOptions));
+app.options(/.*/, cors(corsOptions));
+
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 100,
@@ -28,17 +42,6 @@ const limiter = rateLimit({
 });
 
 app.use(limiter);
-
-let isDbConnected = false;
-let isConnectingDb = false;
-
-app.use(cors({
-    origin: [
-        "http://localhost:5173",
-        "https://hirecraft-orpin.vercel.app"
-    ],
-    credentials: true
-}));
 
 app.use(express.json());
 app.use(requestLogger);

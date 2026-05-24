@@ -9,7 +9,7 @@ export const isTokenExpired = (token) => {
         if (!decoded.exp) return true;
 
         return decoded.exp * 1000 < Date.now();
-    } catch (err) {
+    } catch {
         return true;
     }
 };

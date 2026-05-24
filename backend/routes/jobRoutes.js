@@ -2,6 +2,7 @@ import express from 'express';
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+import { fileURLToPath } from "url";
 import User from '../models/User.js'
 import Job from '../models/Job.js';
 import Application from '../models/Application.js';
@@ -13,12 +14,15 @@ import { authorize, protect } from '../middleware/authMiddleware.js';
 import { deleteResume } from '../controllers/userController.js';
 
 const router = express.Router();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const backendRoot = path.resolve(__dirname, '..');
 
 // ---- MULTER - Storage Engine ----
 
 
 // Ensure upload directory exists
-const uploadDir = path.join(process.cwd(), 'uploads');
+const uploadDir = path.join(backendRoot, 'uploads');
 if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir, {recursive: true});
 }
@@ -49,20 +53,22 @@ const fileFilter = (req, file, cb) => {
 const upload = multer({ 
     storage: storage,
     fileFilter: fileFilter,
-    limits: { fileSize: 1024 * 1024 * 5 } // 5MB Limit
+    limits: { fileSize: 1024 * 1024 * 5 }
 });
 
 
 // --- HELPER FUNCTIONS ---
+const isValidObjectId = (id) => /^[0-9a-fA-F]{24}$/.test(String(id));
+
 const escapeRegExp = (string) => {
     return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 };
 
 const getMatchSummary = (score, matchedSkills, missingSkills, query) => {
-    if (score === 100) return "✨ Perfect match! Your profile aligns with all required skills.";
-    if (score >= 70) return `🚀 Strong contender! You have ${matchedSkills.length} core skills, including ${matchedSkills.slice(0, 2).join(', ')}.`;
-    if (query) return `🔍 Matches your interest in "${query}". This role requires ${missingSkills.length} more specific skills.`;
-    return "💡 Potential match. Focus on gaining experience in " + missingSkills.slice(0, 2).join(' and ') + ".";
+    if (score === 100) return "Perfect match. The resume aligns with all required skills.";
+    if (score >= 70) return `Strong match. Found ${matchedSkills.length} core skills, including ${matchedSkills.slice(0, 2).join(', ')}.`;
+    if (query) return `Search match for "${query}". This role has ${missingSkills.length} skills still to improve.`;
+    return "Potential match. Improve skills in " + missingSkills.slice(0, 2).join(' and ') + ".";
 };
 
 const normalizeJobPayload = (body) => ({
@@ -321,10 +327,10 @@ res.status(200).json(sortedMatches);
     } catch (err) {
         console.error("PDF Parsing Error:", err);
 
-        // delete broken upload if needed
-        if (req.file?.path && fs.existsSync(req.file.path)) {
-            fs.unlinkSync(req.file.path);
-        }
+        // // delete broken upload if needed
+        // if (req.file?.path && fs.existsSync(req.file.path)) {
+        //     fs.unlinkSync(req.file.path);
+        // }
 
         return res.status(500).json({
             error: "Failed to process PDF"
@@ -332,9 +338,13 @@ res.status(200).json(sortedMatches);
 }
 });
 
+// Delete uploaded pdf
+router.delete('/resume/:historyId', protect, authorize('candidate'), deleteResume);
+router.delete('/resume', protect, authorize('candidate'), deleteResume);
+
 // --- 3. CRUD OPERATIONS ---
     // ONLY Recruiters can POST
-router.post('/', protect, authorize('recruiter'), async (req, res) => {
+router.post('/', protect, authorize('recruiter', 'admin'), async (req, res) => {
     try {
         const job = new Job(normalizeJobPayload(req.body));
         await job.save();
@@ -346,22 +356,40 @@ router.post('/', protect, authorize('recruiter'), async (req, res) => {
 });
 
     // ONLY Recruiters can DELETE
-router.delete('/:id', protect, authorize('recruiter'), async (req, res) => {
+router.delete('/:id', protect, authorize('recruiter', 'admin'), async (req, res) => {
     try {
-        await Job.findByIdAndDelete(req.params.id);
+        if (!isValidObjectId(req.params.id)) {
+            return res.status(400).json({ error: "Invalid job id" });
+        }
+
+        const deletedJob = await Job.findByIdAndDelete(req.params.id);
+
+        if (!deletedJob) {
+            return res.status(404).json({ error: "Job not found" });
+        }
+
         res.json({ message: "Job deleted successfully" });
     } catch (err) {
         res.status(500).json({ error: "Deletion failed" });
     }
 });
     //  ONLY Recruiters can UPDATE
-router.put('/:id', protect, authorize('recruiter'), async (req, res) => {
+router.put('/:id', protect, authorize('recruiter', 'admin'), async (req, res) => {
     try {
+        if (!isValidObjectId(req.params.id)) {
+            return res.status(400).json({ error: "Invalid job id" });
+        }
+
         const updatedJob = await Job.findByIdAndUpdate(
             req.params.id,
             normalizeJobPayload(req.body),
             { new: true, runValidators: true }
         );
+
+        if (!updatedJob) {
+            return res.status(404).json({ error: "Job not found" });
+        }
+
         res.json({ message: "Job updated!", job: updatedJob });
     } catch (err) {
         console.error("Update Job Error:", err.message);
@@ -376,6 +404,16 @@ router.post('/apply', protect, authorize('candidate'), async (req, res) => {
         // Ensure same as frontend:
     const { jobId, matchScore, candidateSkills } = req.body;
     const candidateId = req.user._id || req.user.id;
+
+    if (!isValidObjectId(jobId)) {
+        return res.status(400).json({ error: "Invalid job id" });
+    }
+
+    const jobExists = await Job.exists({ _id: jobId });
+
+    if (!jobExists) {
+        return res.status(404).json({ error: "Job not found" });
+    }
 
     // 1. Check if already applied:
     const alreadyApplied = await Application.findOne({ 
@@ -441,6 +479,11 @@ router.get(
 router.get('/my-applications/:candidateId', protect, async (req, res) => {
     try {
         const { candidateId } = req.params;
+
+        if (!isValidObjectId(candidateId)) {
+            return res.status(400).json({ error: "Invalid candidate id" });
+        }
+
         if (req.user.role !== 'recruiter' && String(req.user.id) !== String(candidateId)) {
             return res.status(403).json({ error: "You can only view your own applications" });
         }
@@ -468,7 +511,7 @@ const applications = await Application.find({
 router.get(
     '/applicants',
     protect,
-    authorize('recruiter'),
+    authorize('recruiter', 'admin'),
 
     async (req, res) => {
 
@@ -599,7 +642,7 @@ router.get(
 router.patch(
     '/applicants/:id',
     protect,
-    authorize('recruiter'),
+    authorize('recruiter', 'admin'),
 
     async (req, res) => {
 
@@ -607,8 +650,20 @@ router.patch(
 
             const { id } = req.params;
 
+            if (!isValidObjectId(id)) {
+                return res.status(400).json({
+                    error: "Invalid application id"
+                });
+            }
+
             const status =
-    String(req.body.status).toLowerCase();
+    String(req.body.status || "").toLowerCase();
+
+            if (!["pending", "reviewed", "accepted", "rejected"].includes(status)) {
+                return res.status(400).json({
+                    error: "Invalid application status"
+                });
+            }
 
             const updatedApplication =
                 await Application.findByIdAndUpdate(
@@ -617,7 +672,7 @@ router.patch(
 
                     { status },
 
-                    { new: true }
+                    { new: true, runValidators: true }
 
                 )
                 .populate(
@@ -656,7 +711,7 @@ router.patch(
 
                 emailHtml = `
                     <h2>
-                        Congratulations ${candidate.name} 🎉
+                        Congratulations ${candidate.name}
                     </h2>
 
                     <p>
@@ -704,7 +759,7 @@ router.patch(
             }
 
             // SEND EMAIL
-            if (candidate?.email) {
+            if (candidate?.email && emailSubject) {
 
                 await sendEmail({
                     to: candidate.email,
@@ -741,7 +796,7 @@ router.get(
         try {
 
             const filePath = path.join(
-                process.cwd(),
+                backendRoot,
                 'uploads',
                 req.params.filename
             );
@@ -770,18 +825,9 @@ router.get(
     }
 );
 
-router.get(
-    "/debug-user",
-    protect,
-    async (req, res) => {
-
-        res.json({
-            user: req.user
-        });
-    }
-);
-
-// Delete uploaded pdf
-router.delete('/resume', protect, authorize('candidate'), deleteResume);
+// router.get(
+//     "/debug-user", protect, async (req, res) => {
+//         res.json({success: true, user: req.user});
+//     });
 
 export default router;

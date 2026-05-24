@@ -11,7 +11,7 @@ import { protect, authorize } from "../middleware/authMiddleware.js";
 const router = express.Router();
 
 router.use(protect);
-router.use(authorize("recruiter"));
+router.use(authorize("recruiter", "admin"));
 
 router.get("/applicants-per-job", getApplicantsPerJob);
 router.get("/acceptance-ratio", getAcceptanceRatio);

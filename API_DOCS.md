@@ -55,8 +55,14 @@ Example:
 
 The AI relevance score is calculated using:
 
-matchScore =
+skillScore =
 (matchedSkills / totalRequiredSkills) * 100
+
+semanticScore =
+TF-IDF cosine similarity between resume text and job text
+
+final matchScore =
+(skillScore * 0.60) + (semanticScore * 0.40)
 
 The score determines candidate-job relevance.
 
@@ -75,6 +81,8 @@ Example:
 
 {
   "matchScore": 75,
+  "skillScore": 80,
+  "semanticScore": 68,
   "matchedSkills": ["React", "Node.js"],
   "missingSkills": ["Docker"],
   "rankingReason": "Strong candidate with most required skills."
@@ -101,6 +109,7 @@ This helps recruiters identify the best candidates quickly.
 - JWT Authentication
 - Role-based authorization
 - Recruiter-only routes
+- Admin-capable recruiter management routes
 - Candidate-only routes
 - File upload restrictions
 - Centralized error handling

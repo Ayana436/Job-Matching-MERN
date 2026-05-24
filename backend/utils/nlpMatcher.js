@@ -1,12 +1,10 @@
-const natural = require("natural");
-
-const {
-    extractKeywords
-} = require("./nlpPreprocessor");
+import natural from "natural";
+import { extractKeywords } from "./nlpPreprocessor.js";
 
 const tokenizer = new natural.WordTokenizer();
 const TfIdf = natural.TfIdf;
 
+// Cosine Similarity Logic
 const calculateCosineSimilarity = (
     text1 = "",
     text2 = ""
@@ -51,7 +49,8 @@ const calculateCosineSimilarity = (
     return dotProduct / (magnitude1 * magnitude2);
 };
 
-const generateMatchScore = (
+// Resume Match Score Logic
+export const generateMatchScore = (
     resumeText = "",
     jobText = ""
 ) => {
@@ -115,6 +114,3 @@ return {
 };
 };
 
-module.exports = {
-    generateMatchScore
-};

@@ -1,3 +1,4 @@
+// Basic Stop Words List
 const stopWords = [
     "the", "a", "an", "and", "or",
     "is", "are", "to", "for",
@@ -5,7 +6,8 @@ const stopWords = [
     "at", "by", "from"
 ];
 
-const cleanText = (text = "") => {
+// Text Cleaning Logic
+export const cleanText = (text = "") => {
     return text
         .toLowerCase()
         .replace(/[^\w\s]/g, " ")
@@ -13,19 +15,22 @@ const cleanText = (text = "") => {
         .trim();
 };
 
-const tokenizeText = (text = "") => {
+// Tokenizing Logic
+export const tokenizeText = (text = "") => {
     return cleanText(text)
         .split(" ")
         .filter(word => word.length > 1);
 };
 
-const removeStopWords = (tokens = []) => {
+// Stop Word Removal Logic
+export const removeStopWords = (tokens = []) => {
     return tokens.filter(
         word => !stopWords.includes(word)
     );
 };
 
-const extractKeywords = (text = "") => {
+// Keyword Extraction Logic
+export const extractKeywords = (text = "") => {
     const tokens = tokenizeText(text);
 
     const filtered = removeStopWords(tokens);
@@ -33,9 +38,3 @@ const extractKeywords = (text = "") => {
     return [...new Set(filtered)];
 };
 
-module.exports = {
-    cleanText,
-    tokenizeText,
-    removeStopWords,
-    extractKeywords
-};

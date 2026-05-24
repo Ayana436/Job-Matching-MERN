@@ -77,8 +77,8 @@ const enrichJobsWithApplications = (jobList, applications = []) => {
     });
 };
 
+// Basic candidate dashboard logic
 const CandidateView = () => {
-    // console.log("CandidateView rendered");
     const navigate = useNavigate();
     const user = getStoredJson("user", null);
     const userId = user?.id || user?._id;
@@ -99,16 +99,12 @@ const [hasMatchedResults, setHasMatchedResults] = useState(false);
     const [savedJobs, setSavedJobs] = useState(() => getStoredJson("savedJobs", []));
     const [theme, setTheme] = useState(() => localStorage.getItem("theme") || "dark");
     const [activeTab, setActiveTab] = useState("all");
-    // const [visibleCount, setVisibleCount] = useState(6);
-    const [jobsPage, setJobsPage] =useState(1);
+    const [jobsPage, setJobsPage] = useState(1);
     const [resumeCurrentPage, setResumeCurrentPage] = useState(1);
-    const [applicationsPage, setApplicationsPage] = useState(1);
     const [toast, setToast] = useState(null);
-    
 
     const jobsPerPage = 6;
     const resumesPerPage = 3;
-    const applicationsPerPage = 5;
     const notify = useCallback((message, type = "success") => {
         setToast({ message, type });
         window.setTimeout(() => setToast(null), 2600);
@@ -201,17 +197,12 @@ useEffect(() => {
     let isMounted = true;
 
     const loadInitialData = async () => {
-        // console.log("INITIAL FETCH RUNNING")
-        // if (hasMatchedResults) return;
-
         setJobsLoading(true);
 
         try {
             const token = localStorage.getItem("token");
 
-            const jobsRes = await API.get(
-                "/api/jobs",
-            {
+            const jobsRes = await API.get("/api/jobs", {
                 headers: {
                     Authorization: `Bearer ${token}`,
                 },
@@ -220,10 +211,7 @@ useEffect(() => {
             let appsData = [];
 
             if (userId) {
-                const appsRes = await API.get(
-                    `/api/jobs/my-applications/${userId}`
-                );
-
+                const appsRes = await API.get(`/api/jobs/my-applications/${userId}`);
                 appsData = appsRes.data;
 
                 if (isMounted) {
@@ -232,13 +220,10 @@ useEffect(() => {
             }
 
             if (isMounted) {
-                const enrichedJobs = enrichJobsWithApplications(
-    jobsRes.data,
-    appsData
-);
+                const enrichedJobs = enrichJobsWithApplications(jobsRes.data, appsData);
 
-setAllJobs(enrichedJobs);
-setJobs(enrichedJobs);
+                setAllJobs(enrichedJobs);
+                setJobs(enrichedJobs);
             }
         } catch (err) {
             console.error("Error loading candidate data:", err);
@@ -250,15 +235,12 @@ setJobs(enrichedJobs);
     };
 
     loadInitialData();
-
     fetchResumeHistory();
-
-    // console.log("iFR")
 
     return () => {
         isMounted = false;
     };
-}, []);
+}, [fetchResumeHistory, userId]);
 
 useEffect(() => {
     const interval = setInterval(() => {
@@ -377,6 +359,7 @@ useEffect(() => {
         // setVisibleCount(8);
 
         if (!cleanQuery) {
+            setJobsPage(1);
             setJobs(allJobs);
             return;
         }
@@ -384,6 +367,7 @@ useEffect(() => {
         try {
             setJobsLoading(true);
             const res = await API.get(`/api/jobs/search?q=${encodeURIComponent(cleanQuery)}`);
+            setJobsPage(1);
             setJobs(enrichJobsWithApplications(res.data, applications));
             saveRecentSearch(cleanQuery);
         } catch (err) {
@@ -428,6 +412,7 @@ const handleChipSelect = async (chip) => {
 
         setHasMatchedResults(false);
 
+        setJobsPage(1);
         setJobs(allJobs);
 
         return;
@@ -445,6 +430,7 @@ const handleChipSelect = async (chip) => {
         setJobs(
             enrichJobsWithApplications(res.data, applications)
         );
+        setJobsPage(1);
 
     } catch (err) {
 
@@ -457,9 +443,6 @@ const handleChipSelect = async (chip) => {
 };
 
 const handleResumeUpload = async () => {
-    console.log("Resume upload triggered");
-    
-
     if (!resume) {
         notify("Please choose a PDF file first.", "error");
         return;
@@ -467,43 +450,19 @@ const handleResumeUpload = async () => {
 
     const formData = new FormData();
     formData.append("resume", resume);
-    console.log("Resume file:", resume);
-    console.log("Resume type:", resume?.type);
-    console.log("Resume name:", resume?.name);
+
     try {
         setLoading(true);
 
-        const token = localStorage.getItem("token");
+        const res = await API.post("/api/jobs/match-pdf", formData);
 
-        const res = await API.post(
-    "https://hire-craft.onrender.com/api/jobs/match-pdf",
-            formData,
-            {
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    "Content-Type": "multipart/form-data",
-                },
-            }
-        );
-        console.log(res.data);
+        const matchedJobs = enrichJobsWithApplications(res.data, applications);
 
-        const matchedJobs = enrichJobsWithApplications(
-            res.data,
-            applications
-        );
-
-        console.log("Matched jobs after upload:", matchedJobs);
-
-        // ONLY update displayed jobs
+        setJobsPage(1);
         setJobs([...matchedJobs]);
-
-        // keep track that AI matched results are active
         setHasMatchedResults(true);
 
         await fetchResumeHistory();
-
-        // reset visible cards count
-        // setVisibleCount(8);
 
         notify("Resume analyzed. Best matches are ranked first.");
     } catch (err) {
@@ -572,68 +531,81 @@ const toggleSavedJob = (jobId) => {
         navigate("/auth");
     };
 
-const handleDeleteResume = async () => {
-
+const handleDeleteResume = async (resumeItem) => {
     try {
+        if (!resumeItem?._id) {
+            notify("Resume record is missing. Refresh and try again.", "error");
+            return;
+        }
 
-        const token =
-            localStorage.getItem("token");
-
-        console.log("DELETE TOKEN:", token);
-
-        const response = await API.delete(
-            "/api/jobs/resume",
-            {
-                headers: {
-                    Authorization:
-                        `Bearer ${token}`
-                }
-            }
+        const shouldDelete = window.confirm(
+            `Delete ${resumeItem.fileName || "this resume"}?`
         );
 
-        console.log(response.data);
+        if (!shouldDelete) return;
+
+        await API.delete(`/api/jobs/resume/${resumeItem._id}`);
 
         setResume(null);
-
-        setMatchedJobs([]);
-
-        notify(
-            "Resume deleted successfully"
+        setResumeHistory((prev) =>
+            prev.filter((item) => item._id !== resumeItem._id)
         );
+        setResumeCurrentPage((prev) =>
+            Math.max(
+                1,
+                Math.min(
+                    prev,
+                    Math.ceil((resumeHistory.length - 1) / resumesPerPage) || 1
+                )
+            )
+        );
+        setJobsPage(1);
+        setJobs(allJobs);
+        setHasMatchedResults(false);
 
+        notify("Resume deleted successfully");
     } catch (err) {
-
-        console.error(
-            "DELETE ERROR:",
-            err.response?.data || err
-        );
+        console.error("DELETE ERROR:", err.response?.data || err);
 
         notify(
             err.response?.data?.message ||
+            err.response?.data?.error ||
             "Failed to delete resume",
             "error"
         );
     }
 };
 
-        const pendingJobs = applications.filter(
-            (app) =>
-                String(app.status).toLowerCase() === "pending"
-        );
+const appliedJobs = allJobs.filter((job) => job.applied);
 
-        const acceptedJobs = applications.filter(
-            (app) =>
-                String(app.status).toLowerCase() === "accepted"
-        );
+const pendingJobs = appliedJobs.filter(
+    (job) =>
+        String(job.applicationStatus).toLowerCase() === "pending"
+);
 
-        const rejectedJobs = applications.filter(
-            (app) =>
-                String(app.status).toLowerCase() === "rejected"
-        );
+const acceptedJobs = appliedJobs.filter(
+    (job) =>
+        String(job.applicationStatus).toLowerCase() === "accepted"
+);
+
+const rejectedJobs = appliedJobs.filter(
+    (job) =>
+        String(job.applicationStatus).toLowerCase() === "rejected"
+);
 
 const filteredJobs = useMemo(() => {
 
-    let filtered = [...jobs];
+    const applicationTabs = [
+        "saved",
+        "applications",
+        "pending",
+        "accepted",
+        "rejected"
+    ];
+
+    let filtered = applicationTabs.includes(activeTab)
+        ? [...allJobs]
+        : [...jobs];
 
     // SAVED JOBS
     if (activeTab === "saved") {
@@ -681,14 +653,12 @@ const filteredJobs = useMemo(() => {
     // DEFAULT
     return filtered;
 
-}, [jobs, savedJobs, activeTab]);
+}, [allJobs, jobs, savedJobs, activeTab]);
 
-    // return filtered;
+useEffect(() => {
+    setJobsPage(1);
+}, [activeTab, searchQuery, selectedChips.length, hasMatchedResults]);
 
-// }, [jobs, savedJobs, showSavedOnly, applicationFilter]);
-    // const visibleJobs = useMemo(() => filteredJobs.slice(0, visibleCount), [filteredJobs, visibleCount]);
-    const acceptedCount = applications.filter((app) => String(app.status).toLowerCase() === "accepted").length;
-    
     // Profile Completion
     const profileCompletion = useMemo(() => {
 
@@ -720,28 +690,12 @@ const resumeStartIndex =
 
 const paginatedResumeHistory =
     resumeHistory
-        .slice()
-        .reverse()
         .slice(
             resumeStartIndex,
             resumeStartIndex + resumesPerPage
         );
 
-// Applied JOBS PAGINATION
-const totalApplicationPages = Math.ceil(
-    applications.length / applicationsPerPage
-);
-
-const applicationStartIndex =
-    (applicationsPage - 1) * applicationsPerPage;
-
-const paginatedApplications =
-    applications.slice(
-        applicationStartIndex,
-        applicationStartIndex + applicationsPerPage
-    );
-
-    const totalJobPages = Math.ceil(
+const totalJobPages = Math.ceil(
     filteredJobs.length / jobsPerPage
 );
 
@@ -755,17 +709,15 @@ const visibleJobs =
     );
 
 const getResumeUrl = (filePath) => {
-
     if (!filePath) return "";
 
-    let cleanedPath =
-        filePath.replace(/\\/g, "/");
+    const cleanedPath = filePath.replace(/\\/g, "/");
+    const filename = cleanedPath.split("/").pop();
+    const baseUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
-    const filename =
-        cleanedPath.split("/").pop();
-
-    return `https://hire-craft.onrender.com/uploads/${filename}`;
+    return `${baseUrl}/uploads/${filename}`;
 };
+
 // STATUS BADGE LOGIC
 const getStatusClass = (status) => {
 
@@ -780,27 +732,11 @@ const getStatusClass = (status) => {
             return "status-rejected";
 
         case "review":
+        case "reviewed":
             return "status-review";
 
         default:
             return "status-pending";
-    }
-};
-
-
-const getStatusColor = (status) => {
-    switch ((status || "").toLowerCase()) {
-        case "accepted":
-            return "#22c55e";
-
-        case "rejected":
-            return "#ef4444";
-
-        case "review":
-            return "#3b82f6";
-
-        default:
-            return "#f59e0b";
     }
 };
 
@@ -811,6 +747,7 @@ const getTimelineStep = (status) => {
             return 1;
 
         case "review":
+        case "reviewed":
             return 2;
 
         case "accepted":
@@ -868,7 +805,7 @@ const getTimelineStep = (status) => {
             // setVisibleCount(8);
         }}
     >
-        <strong>{applications.length}</strong>
+        <strong>{appliedJobs.length}</strong>
         <span>Applications</span>
     </button>
 
@@ -1135,11 +1072,6 @@ const getTimelineStep = (status) => {
 
                 {paginatedResumeHistory.map(
                     (resumeItem, index) => {
-
-                    const resumeUrl =
-                        resumeItem.filePath
-                            ?.replaceAll("\\", "/");
-
                     return (
 
                         <div
@@ -1220,7 +1152,12 @@ const getTimelineStep = (status) => {
 >
     Download Resume
 </button>
-<button className="delete-resume-btn" onClick={handleDeleteResume}>Delete Resume</button>
+<button
+    className="delete-resume-btn"
+    onClick={() => handleDeleteResume(resumeItem)}
+>
+    Delete Resume
+</button>
 
     </div>
 

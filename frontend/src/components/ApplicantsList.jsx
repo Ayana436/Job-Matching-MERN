@@ -54,9 +54,6 @@ const handleStatusUpdate = async (applicationId, newStatus) => {
             status: newStatus.toLowerCase()
         });
         
-        // ✨ MANUAL UI UPDATE:
-        // Assuming your state variable for the list is called 'applicants'
-        // This find the specific row and flips the status without a page reload.
         setApplicants(prev => prev.map(app => 
             app._id === applicationId ? { ...app, status: newStatus } : app
         ));
@@ -68,14 +65,6 @@ const handleStatusUpdate = async (applicationId, newStatus) => {
         console.error("Status update failed:", err);
         notify("Failed to update status.", "error");
     }
-};
-
-const getResumeStrength = (score) => {
-
-    if (score >= 80) return "Strong";
-    if (score >= 60) return "Moderate";
-    return "Weak";
-
 };
 
 const filteredApplicants = applicants.filter((app) =>
