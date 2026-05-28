@@ -1,99 +1,540 @@
-    /* --- RECRUITER --- */
+/* ==========================================================================
+PREMIUM B2B SAAS GLASSMORPHISM RECRUITER MASTER INTERFACE
+   ========================================================================== */
 
-    .recruiter-container {
+/* --- 1. DASHBOARD ROOT & WRAPPER LAYER --- */
+.recruiter-container {
     padding: 40px;
-    max-width: 1100px;
+    max-width: 1500px;
     margin: 0 auto;
-    color: white;
-    }
+    background-color: #0b0b0e !important;
+    min-height: 100vh;
+    color: #ffffff;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
 
-    .recruiter-header {
+/* Page context header */
+.recruiter-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 30px;
-    }
+    margin-bottom: 40px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
 
-    .header-title {
+.header-title {
     font-size: 1.8rem;
-    }
+    font-weight: 700;
+    margin: 0;
+}
 
-    .header-title span {
-    color: #646cff;
-    }
+.header-title span {
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
 
-    .job-form-card {
-    background: #1e1e26;
-    padding: 40px;
-    border-radius: 20px;
-    }
+.header-nav {
+    display: flex;
+    gap: 14px;
+}
 
-    .form-grid-2 {
+/* --- 2. EXECUTIVE METRIC METERS (KPI CARDS) --- */
+.kpi-container-row, .analytics-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2,1fr) !important;
+    gap: 28px !important;
+    margin-bottom: 40px !important;
+}
+
+.kpi-badge-card, .analytics-card {
+    background: rgba(30, 30, 38, 0.6) !important;
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.06) !important;
+    border-radius: 16px !important;
+    padding:24px !important;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.kpi-badge-card:hover, .analytics-card:hover {
+    border-color: rgba(99, 102, 241, 0.4) !important;
+    transform: translateY(-2px);
+}
+
+.kpi-indicator-value, .analytics-card strong {
+    font-size: 2.2rem !important;
+    font-weight: 800 !important;
+    letter-spacing: -1px;
+    line-height: 1;
+    margin: 0 0 6px 0 !important;
+    background: linear-gradient(to right, #ffffff, #a5b4fc) !important;
+    -webkit-background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    background-clip: text !important;
+    text-align: center;
+}
+
+.stat-label, .analytics-card span {
+    font-size: 0.85rem !important;
+    color: #94a3b8 !important;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    text-align: center;
+}
+
+/* --- 3. SIDE-BY-SIDE ANALYTICS BLOCK PANELS --- */
+.analytics-dashboard-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
-    }
+    grid-template-columns: repeat(2, 1fr) !important; /* Forces layout boxes side-by-side */
+    gap: 24px;
+    margin-bottom: 40px;
+}
 
-    .form-grid-3 {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 20px;
-    }
+.dashboard-card-glow, .chart-card {
+    background: rgba(20, 20, 27, 0.7) !important;
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.07) !important;
+    border-radius: 20px !important;
+    padding: 28px !important;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+}
 
-    .input-group label {
-    display: block;
-    margin-bottom: 8px;
-    opacity: 0.7;
-    }
+.dashboard-card-glow h2, .dashboard-card-glow h3, .chart-card h3 {
+    margin: 0 0 20px 0;
+    font-size: 1.25rem;
+    color: #e2e8f0;
+    font-weight: 600;
+}
 
-    .input-field {
-    width: 100%;
-    padding: 12px;
-    border-radius: 10px;
-    border: 1px solid rgba(255,255,255,0.1);
-    background: rgba(255,255,255,0.05);
-    color: white;
-    }
+/* Wide charts or logs (like application trends) stretch across safely */
+.chart-span-wide, .activity-feed-card, .insight-card, .missing-skills-card {
+    grid-column: span 2 !important;
+}
 
-    .input-field:focus {
-    border-color: #646cff;
-    outline: none;
-    }
+/* --- 4. LIVE LOGS & RECRUITER INSIGHT PACKS --- */
+.activity-feed-list {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)) !important; /* Unsnaps stacked logs */
+    gap: 16px !important;
+    max-height: unset !important;
+    margin-top: 10px;
+}
 
-    .btn-primary {
-    background: #6366f1;
-    color: white;
-    border: none;
-    padding: 15px;
-    border-radius: 12px;
-    cursor: pointer;
+.activity-item {
+    background: rgba(255, 255, 255, 0.02) !important;
+    border: 1px solid rgba(255, 255, 255, 0.05) !important;
+    border-left: 3px solid #6366f1 !important;
+    border-radius: 12px !important;
+    padding: 16px !important;
+    margin: 0 !important;
+}
+
+.activity-live, .live-badge {
+    background: rgba(34, 197, 94, 0.1) !important;
+    color: #22c55e !important;
+    border: 1px solid rgba(34, 197, 94, 0.3) !important;
+    margin-bottom: 10px;
+    padding: 6px 14px;
+    border-radius: 100px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+/* --- 5. DATA EXTRACTION CANDIDATE TABLES --- */
+.premium-data-table, .ranking-table {
+    width: 100% !important;
+    border-collapse: separate !important;
+    border-spacing: 0 8px !important;
+    margin-top: 15px;
+    background: transparent !important;
+    border: none !important;
+}
+
+.premium-data-table th, .ranking-table th {
+    padding: 16px !important;
+    font-size: 0.8rem !important;
+    font-weight: 700 !important;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #818cf8 !important;
+    border-bottom: 2px solid rgba(100, 108, 255, 0.1) !important;
+}
+
+.premium-data-table tr, .ranking-table tbody tr {
+    background: rgba(255, 255, 255, 0.02) !important;
+}
+
+.premium-data-table tr:hover td, .ranking-table tbody tr:hover td {
+    background: rgba(100, 108, 255, 0.05) !important;
+}
+
+.premium-data-table td, .ranking-table td {
+    padding: 16px !important;
+    background: rgba(25, 25, 32, 0.5) !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.04) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04) !important;
+    color: #e2e8f0 !important;
+}
+
+.premium-data-table td:first-child, .ranking-table td:first-child {
+    border-left: 1px solid rgba(255, 255, 255, 0.04) !important;
+    border-top-left-radius: 12px !important;
+    border-bottom-left-radius: 12px !important;
+}
+
+.premium-data-table td:last-child, .ranking-table td:last-child {
+    border-right: 1px solid rgba(255, 255, 255, 0.04) !important;
+    border-top-right-radius: 12px !important;
+    border-bottom-right-radius: 12px !important;
+}
+
+/* --- 6. FLOW PILL BADGES --- */
+.status-pill, .ranking-status {
+    padding: 6px 14px !important;
+    border-radius: 100px !important;
+    font-size: 0.75rem !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    display: inline-flex;
+    align-items: center;
+    background: transparent;
+}
+
+.status-accepted, .ranking-status.accepted { background: rgba(16, 185, 129, 0.15) !important; color: #10b981 !important; border: 1px solid rgba(16, 185, 129, 0.3) !important; }
+.status-pending, .ranking-status.pending  { background: rgba(245, 158, 11, 0.15) !important; color: #f59e0b !important; border: 1px solid rgba(245, 158, 11, 0.3) !important; }
+.status-rejected, .ranking-status.rejected { background: rgba(239, 68, 68, 0.15) !important; color: #ef4444 !important; border: 1px solid rgba(239, 68, 68, 0.3) !important; }
+.status-reviewed, .ranking-status.reviewed { background: rgba(59, 130, 246, 0.15) !important; color: #3b82f6 !important; border: 1px solid rgba(59, 130, 246, 0.3) !important; }
+
+/* --- 7. RECRUITER ACTION BUTTONS --- */
+.btn-applicants {
+    background: rgba(100, 108, 255, 0.1) !important;
+    color: #646cff !important;
+    border: 1px solid #646cff !important;
+    padding: 10px 22px !important;
+    border-radius: 10px !important;
     font-weight: bold;
-    }
-
-    .btn-cancel {
-    background: rgba(255,255,255,0.05);
-    color: #888;
-    border: 1px solid rgba(255,255,255,0.1);
-    padding: 15px;
-    border-radius: 12px;
     cursor: pointer;
-    }
+}
 
-    .job-item {
-    background: #252530;
-    padding: 20px;
-    border-radius: 15px;
-    margin-bottom: 15px;
-    }
+.btn-logout {
+    background: rgba(244, 67, 54, 0.1) !important;
+    color: #f44336 !important;
+    border: 1px solid #f44336 !important;
+    padding: 10px 22px !important;
+    border-radius: 10px !important;
+    font-weight: bold;
+    cursor: pointer;
+}
 
-    .edit-btn {
-    color: #4caf50;
-    border: 1px solid #4caf50;
-    background: #4caf501a;
-    }
+/* --- 8. SUBMISSION FORM MANAGEMENT --- */
+.job-form-card {
+    background: rgba(15, 23, 42, 0.6) !important;
+    border: 1px solid rgba(255, 255, 255, 0.05) !important;
+    padding: 32px !important;
+    border-radius: 20px !important;
+    margin-bottom: 40px;
+}
 
-    .delete-btn {
-    color: #f44336;
-    border: 1px solid #f44336;
-    background: #f443361a;
+/* --- 9. WEB LAYOUT RESPONSIVE MEDIA CONSTRAINTS --- */
+@media (max-width: 1150px) {
+    .analytics-dashboard-grid {
+        grid-template-columns: 1fr !important; /* Stack columns on smaller viewports */
     }
+    .chart-span-wide, .activity-feed-card, .insight-card, .missing-skills-card {
+        grid-column: span 1 !important;
+    }
+}
+/* --- 10. DYNAMIC LIVE DATA INSIGHT UTILITIES --- */
+.insight-pills-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin: 15px 0 25px 0;
+}
+
+.insight-pill-container {
+    background: rgba(99, 102, 241, 0.05) !important;
+    border: 1px solid rgba(99, 102, 241, 0.15) !important;
+    border-radius: 12px;
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    min-width: 260px;
+}
+
+.insight-pill-icon {
+    width: 8px;
+    height: 8px;
+    background: #6366f1;
+    border-radius: 50%;
+    box-shadow: 0 0 10px #6366f1;
+    animation: pulse 2s infinite;
+}
+
+.insight-pill-text {
+    font-size: 0.9rem;
+    color: #cbd5e1;
+    line-height: 1.4;
+}
+
+.insight-pill-text strong {
+    color: #818cf8;
+}
+
+/* --- 11. SUBMISSION CODE CARD INTERACTIVE SCROLL --- */
+.feed-scroll-box {
+    display: flex;
+    gap: 16px;
+    overflow-x: auto;
+    padding: 10px 5px 20px 5px;
+    mask-image: linear-gradient(to right, black 85%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to right, black 85%, transparent 100%);
+}
+
+.feed-scroll-box::-webkit-scrollbar {
+    height: 6px;
+}
+.feed-scroll-box::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+}
+/* --- 12. CLEAN UP RECHARTS CANVAS BOUNDS --- */
+.chart-card {
+    background: rgba(20, 20, 27, 0.7) !important;
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.07) !important;
+    border-radius: 20px !important;
+    padding: 24px !important;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3) !important;
+    min-height: unset !important; /* Removes the stretched constraints breaking the canvas aspect ratios */
+}
+
+/* Target internal Recharts text elements for crisp readability */
+.recharts-text {
+    fill: #94a3b8 !important;
+    font-family: 'Inter', sans-serif !important;
+    font-size: 11px !important;
+}
+
+.recharts-cartesian-grid-line {
+    stroke: rgba(255, 255, 255, 0.05) !important;
+}
+
+@media (max-width: 1100px) {
+    .analytics-grid {
+        grid-template-columns: 1fr !important; /* Safe fall-back layout for tablet dimensions */
+    }
+    .chart-span-wide, .missing-skills-card, .activity-feed-card, .insight-card {
+        grid-column: span 1 !important;
+    }
+}
+/* --- 13. PREMIUM TAB INTERACTION SYSTEM --- */
+.role-option {
+    background: transparent;
+    color: rgba(255, 255, 255, 0.6) !important;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.role-option:hover:not(.active) {
+    background: rgba(255, 255, 255, 0.04) !important;
+    color: #ffffff !important;
+}
+
+.role-option.active {
+    background: #6366f1 !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4);
+}
+.filter-chip {
+    background: rgba(99, 102, 241, 0.1) !important;
+    color: #818cf8 !important;
+    border: 1px solid rgba(99, 102, 241, 0.3) !important;
+    padding: 8px 14px;
+    border-radius: 100px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.filter-chip:hover {
+    background: rgba(239, 68, 68, 0.1) !important;
+    color: #f87171 !important;
+    border-color: rgba(239, 68, 68, 0.4) !important;
+}
+/* --- 14. MOBILE HORIZONTAL TABLE ISOLATION WRAPPERS --- */
+.table-responsive-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin-bottom: 20px;
+    border-radius: 12px;
+}
+
+/* Ensure data nodes don't drop below readable dimensions */
+.ranking-table {
+    min-width: 900px; /* Enforces clean horizontal layouts instead of squeezing columns */
+}
+
+.ranking-table td {
+    white-space: nowrap; /* Prevents role titles from splitting into fragmented vertical stacks */
+}
+@media (max-width: 768px) {
+    /* Balance the summary metrics row into two columns on compact screens */
+    .recruiter-container > div[style*="flex-wrap"] {
+        display: grid !important;
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 12px !important;
+    }
+    
+    .kpi-badge-card {
+        min-width: unset !important;
+        padding: 16px !important;
+    }
+    
+    .kpi-indicator-value {
+        font-size: 1.6rem !important;
+    }
+}
+/* ==========================================================================
+   15. APPLICANT MATRIX MATRIX & TABLE ARCHITECTURE RESOLUTION
+   ========================================================================== */
+
+.table-responsive-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin: 25px 0;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    background: rgba(15, 23, 42, 0.4);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.ranking-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 1000px; /* Enforces absolute minimum width to map bounds cleanly */
+    text-align: left;
+}
+
+.ranking-table th {
+    background: rgba(0, 0, 0, 0.2);
+    padding: 16px 20px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.75px;
+    color: #818cf8;
+    border-bottom: 2px solid rgba(99, 102, 241, 0.2);
+}
+
+.ranking-table td {
+    padding: 18px 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    vertical-align: middle;
+    color: #e2e8f0;
+}
+
+.ranking-table tr:hover {
+    background: rgba(99, 102, 241, 0.03) !important;
+}
+
+/* Candidate Information Block */
+.candidate-cell-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.candidate-primary-name {
+    font-size: 0.95rem;
+    color: #ffffff;
+}
+
+.ranking-subtext {
+    font-size: 0.75rem;
+    color: #94a3b8;
+}
+
+/* Role Specification Badge */
+.role-title-badge {
+    display: inline-block;
+    font-weight: 600;
+    color: #f1f5f9;
+    white-space: normal; /* Permits balanced multi-word text wrapping safely */
+    line-height: 1.4;
+}
+
+/* Match Indicator Custom Progress Bar */
+.score-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-width: 120px;
+}
+
+.score-percentage-value {
+    font-size: 0.9rem;
+    color: #38bdf8;
+}
+
+.score-track-bg {
+    width: 100%;
+    height: 5px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    overflow: hidden;
+    display: block;
+}
+
+.score-track-bg i {
+    height: 100%;
+    background: linear-gradient(90deg, #38bdf8, #6366f1);
+    display: block;
+    border-radius: 10px;
+}
+
+/* Dynamic AI Stream Routing Panel Block */
+.ai-inference-container {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.ai-pill-tag {
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    width: fit-content;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border: 1px solid rgba(99, 102, 241, 0.2);
+}
+
+.ai-insight-text-block {
+    font-size: 0.8rem;
+    color: #cbd5e1;
+    line-height: 1.5;
+}

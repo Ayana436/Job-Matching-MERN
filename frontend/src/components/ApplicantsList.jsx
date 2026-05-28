@@ -134,185 +134,73 @@ const paginatedApplicants =
 
 </div>
 
-            <table className='incoming applicants-table' style={{ width: '100%', color: 'white', borderCollapse: 'collapse' }}>
-                <thead>
-                    <tr style={{ background: 'rgba(255,255,255,0.05)', textAlign: 'left' }}>
-                        <th style={{ padding: '15px' }}>Candidate</th>
-                        <th style={{ padding: '15px' }}>Role</th>
-                        <th style={{ padding: '15px' }}>Match</th>
-                        <th style={{ padding: '15px', textAlign:'center' }}>Resume</th>
-                        <th style={{ padding: '15px' }}>Status</th>
-                        <th style={{ padding: '15px' }}>AI Recommendation</th>
-                        <th style={{ padding: '15px' }}>Action</th>
-                        <th style={{ padding: '15px' }}>Resume Strength Meter</th>
+            <div className="table-responsive-wrapper">
+    <table className="ranking-table">
+        <thead>
+            <tr>
+                <th style={{ width: "8%" }}>Rank</th>
+                <th style={{ width: "20%" }}>Candidate Entity</th>
+                <th style={{ width: "22%" }}>Target Role Position</th>
+                <th style={{ width: "10%" }}>AI Match</th>
+                <th style={{ width: "12%" }}>Status Routing</th>
+                <th style={{ width: "28%" }}>Inference Recommendation Explanation</th>
+            </tr>
+        </thead>
+        <tbody>
+            {paginatedApplicants.map((app, index) => {
+                const currentStartIndex = (currentPage - 1) * applicantsPerPage;
+                
+                return (
+                    <tr key={`${app._id}-${app.refreshKey || index}`}>
+                        <td>
+                            <span className="rank-badge">
+                                #{currentStartIndex + index + 1}
+                            </span>
+                        </td>
+                        <td>
+                            <div className="candidate-cell-info">
+                                <strong className="candidate-primary-name">
+                                    {app.candidateId?.name || 'Anonymous User'}
+                                </strong>
+                                <span className="ranking-subtext">
+                                    {app.candidateId?.email || 'No email log'}
+                                </span>
+                            </div>
+                        </td>
+                        <td>
+                            <span className="role-title-badge">
+                                {app.jobId?.title || 'Unresolved Entity'}
+                            </span>
+                        </td>
+                        <td>
+                            <div className="score-cell">
+                                <b className="score-percentage-value">{app.matchScore || 0}%</b>
+                                <span className="score-track-bg">
+                                    <i style={{ width: `${Math.min(app.matchScore || 0, 100)}%` }} />
+                                </span>
+                            </div>
+                        </td>
+                        <td>
+                            <span className={`ranking-status ${String(app.status).toLowerCase()}`}>
+                                {app.status}
+                            </span>
+                        </td>
+                        <td>
+                            <div className="ai-inference-container">
+                                <span className="ai-pill-tag" style={{ background: app.recommendationColor || "rgba(99, 102, 241, 0.15)", color: "#818cf8" }}>
+                                    {app.aiRecommendation || "Pending Allocation"}
+                                </span>
+                                <small className="ai-insight-text-block">
+                                    {app.aiInsight || "Analyzing portfolio parameters..."}
+                                </small>
+                            </div>
+                        </td>
                     </tr>
-                </thead>
-                <tbody>
-                    {paginatedApplicants.map(app => (
-                        <tr key={app._id} style={{ borderBottom: '1px solid #1e293b' }}>
-                            <td style={{ padding: '15px' }}><div style={{ fontWeight: 'bold' }}>
-                                {app.candidateId?.name}</div>
-                                <div style={{ fontSize: '0.75rem', color: '#646cff', marginTop: '4px' }}>
-                                    {app.candidateSkills && app.candidateSkills?.length > 0 
-                                        ? app.candidateSkills.join(', ') 
-                                        : 'No extracted skills...'}
-                                </div>
-                                </td>
-                            <td style={{ padding: '15px' }}>{app.jobId?.title}</td>
-                            <td style={{ padding: '15px', fontWeight: 'bold', color: '#6366f1' }}>
-                                {app.matchScore}%
-                            </td>
-                            <td style={{ padding: '15px'}}>
-
-{app.candidateId?.resume?.filePath ? (
-
-    <div
-        style={{
-            display: "flex",
-            gap: "10px"
-        }}
-    >
-
-        <button
-            onClick={() => {
-
-                const resumeUrl =
-                    app.candidateId.resume.filePath
-                        .replaceAll("\\", "/");
-
-                window.open(
-                    `${import.meta.env.VITE_API_URL}/${resumeUrl}`,
-                    "_blank"
                 );
-            }}
-            style={{
-                background: "#1e293b",
-                color: "white",
-                border: "1px solid #334155",
-                padding: "6px 12px",
-                borderRadius: "6px",
-                cursor: "pointer"
-            }}
-        >
-            View
-        </button>
-
-        <button
-            onClick={() => {
-
-                const resumeUrl =
-                    app.candidateId.resume.filePath
-                        .replaceAll("\\", "/");
-
-                const link =
-                    document.createElement("a");
-
-                link.href =
-                    `${import.meta.env.VITE_API_URL}/${resumeUrl}`;
-
-                link.download =
-                    app.candidateId.resume.fileName ||
-                    "resume.pdf";
-
-                document.body.appendChild(link);
-
-                link.click();
-
-                document.body.removeChild(link);
-            }}
-            style={{
-                background: "#4caf5022",
-                color: "#4caf50",
-                border: "1px solid #4caf50",
-                padding: "6px 12px",
-                borderRadius: "6px",
-                cursor: "pointer"
-            }}
-        >
-            Download
-        </button>
-
-    </div>
-
-) : (
-
-    <span style={{ color: "#888" }}>
-        No Resume
-    </span>
-
-)}
-
-</td>
-                            <td style={{ padding: '15px' }}>
-    {app.status}
-</td>
-
-<td style={{ padding: '15px' }}>
-
-    <div
-        style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: "6px"
-        }}
-    >
-
-        <span
-            style={{
-                background:
-                    `${app.recommendationColor || "#64748b"}22`,
-
-                color:
-                    app.recommendationColor || "#64748b",
-
-                border:
-                    `1px solid ${app.recommendationColor || "#64748b"}`,
-
-                padding: "6px 10px",
-
-                borderRadius: "999px",
-
-                fontSize: "0.75rem",
-
-                fontWeight: "bold",
-
-                width: "fit-content"
-            }}
-        >
-            {app.aiRecommendation || "Pending"}
-        </span>
-
-        <small
-            style={{
-                color: "#94a3b8",
-                lineHeight: "1.4"
-            }}
-        >
-            {app.aiInsight || "No AI insight yet"}
-        </small>
-
-    </div>
-
-</td>
-                            <td>
-                                <div style={{ display: 'flex', gap: '10px' }}>
-                                    <button className="approve-btn" onClick={() => handleStatusUpdate(app._id, 'accepted')}style={{ background: '#4caf5022', color: '#4caf50', border: '1px solid #4caf50', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>
-                                        Approve
-                                    </button>
-                                    <button className="reject-btn" onClick={() => handleStatusUpdate(app._id, 'rejected')}style={{ background: '#f4433622', color: '#f44336', border: '1px solid #f44336', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>
-                                        Reject
-                                    </button>
-                                </div>
-                            </td>
-                            <td>
-                                <div className="resume-strength high">
-                                    Strong Resume
-                                </div>
-                            </td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
+            })}
+        </tbody>
+    </table>
+</div>
                 <div className="pagination-controls">
 
                 <button

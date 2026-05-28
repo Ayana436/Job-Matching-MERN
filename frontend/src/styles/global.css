@@ -545,3 +545,20 @@
     color:white;
 
 }
+/* Enforces clean layout separation */
+.ranking-section {
+    width: 100% !important;
+    max-width: 100% !important;
+    display: block !important;
+    clear: both !important;
+}
+
+.role-title-badge {
+    display: block;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #ffffff;
+    white-space: normal !important; /* Fixed line clipping bug */
+    word-break: break-word;
+    max-width: 250px;
+}
