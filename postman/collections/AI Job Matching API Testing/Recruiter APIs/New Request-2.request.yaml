@@ -1,0 +1,7 @@
+$kind: http-request
+name: New Request
+url: http://localhost:5000/api/jobs/applicants
+method: GET
+headers:
+  Authorization: Bearer {{rtoken}}
+order: 4397756145539701

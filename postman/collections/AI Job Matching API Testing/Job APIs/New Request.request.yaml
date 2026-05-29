@@ -1,0 +1,30 @@
+$kind: http-request
+name: New Request
+url: http://localhost:5000/api/jobs
+method: POST
+body:
+  type: json
+  content: "{\r
+
+    \  \"title\": \"MERN FullStack Developer\",\r
+
+    \  \"location\": \"Pune\",\r
+
+    \  \"requiredSkills\": [\"React\", \"Node.js\", \"MongoDB\", \"Express\"],\r
+
+    \  \"workMode\": \"Remote\",\r
+
+    \  \"jobType\": \"Full-time\",\r
+
+    \  \"experienceLevel\": \"Entry Level\",\r
+
+    \  \"salary\": \"8 LPA\",\r
+
+    \  \"description\": \"Need React Node MongoDB developer\"\r
+
+    }"
+auth:
+  type: bearer
+  credentials:
+    token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhMTk4OTNkM2Q1YTRlMDQyYTdmZGY2MCIsInJvbGUiOiJyZWNydWl0ZXIiLCJpYXQiOjE3ODAwNTg2ODYsImV4cCI6MTc4MDE0NTA4Nn0.r2wq3QRrK4LqblQ0b-Hqvc7bovLR-FKqOrzV5DXZW7g
+order: 1780059166697

@@ -1,0 +1,7 @@
+$kind: http-request
+name: New Request
+url: http://localhost:5000/api/jobs/search?keyword=EC2
+method: GET
+queryParams:
+  keyword: EC2
+order: 3524949428085775

@@ -1,0 +1,9 @@
+$kind: http-request
+name: New Request
+url: http://localhost:5000/api/jobs/resume/6a19d493814dc58375843db9
+method: DELETE
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+order: 4245744980359154

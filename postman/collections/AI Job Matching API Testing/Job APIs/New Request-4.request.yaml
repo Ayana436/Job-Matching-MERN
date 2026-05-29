@@ -1,0 +1,16 @@
+$kind: http-request
+name: New Request
+url: http://localhost:5000/api/jobs/apply
+method: POST
+body:
+  type: json
+  content: "{\r
+
+    \  \"jobId\": \"6a12fdec6350746d0a2b6c49\"\r
+
+    }"
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+order: 4177483513467518

@@ -43,7 +43,7 @@ const fileFilter = (req, file, cb) => {
     file.mimetype === "application/pdf" &&
     path.extname(file.originalname).toLowerCase() === ".pdf";
 
-    if (isPdf) {
+    if (file.originalname.toLowerCase().endsWith('.pdf')) {
         cb(null, true);
     } else {
         cb(new Error('Invalid file type. Only PDFs are allowed!'), false);

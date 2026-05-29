@@ -1,0 +1,14 @@
+$kind: http-request
+name: New Request
+url: http://localhost:5000/api/auth/login
+method: POST
+body:
+  type: json
+  content: "{\r
+
+    \  \"email\": \"recruiter@gmail.com\",\r
+
+    \  \"password\": \"123456\"\r
+
+    }"
+order: 238471456989630

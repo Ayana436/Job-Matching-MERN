@@ -1,0 +1,10 @@
+name: New Environment
+values:
+  - key: recruiterToken
+    value: ''
+  - key: candidateToken
+    value: ''
+  - key: token
+    value: ''
+  - key: rtoken
+    value: ''

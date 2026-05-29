@@ -1,0 +1,18 @@
+$kind: http-request
+name: New Request
+url: http://localhost:5000/api/jobs/match-pdf
+method: POST
+body:
+  type: formdata
+  content:
+    - type: file
+      key: resume
+      src:
+        - postman-cloud:///1f159ebe-45b4-4790-b108-4fb3e51e0192
+      description: First candidate try via postman
+      disabled: false
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+order: 1625426765207594

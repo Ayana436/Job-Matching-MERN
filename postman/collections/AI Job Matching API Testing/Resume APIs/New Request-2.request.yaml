@@ -1,0 +1,9 @@
+$kind: http-request
+name: New Request
+url: http://localhost:5000/api/jobs/resume-history
+method: GET
+auth:
+  type: bearer
+  credentials:
+    token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhMTljYTI1NmY0NGY2MzA3YjZmYzBhNyIsInJvbGUiOiJjYW5kaWRhdGUiLCJpYXQiOjE3ODAwNzY5NTAsImV4cCI6MTc4MDE2MzM1MH0.kuQyoKcpbXFsuBC6tdaP-zQbOoyD6XZ0QrQDTftP3CA
+order: 1804016139027518

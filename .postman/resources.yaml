@@ -1,0 +1,12 @@
+# Use this workspace to collaborate
+workspace:
+  id: 33cb75e6-4a82-4029-9735-1b090ef63589
+
+localResources:
+  specs:
+    - ..\backend\openapi.json
+  docs:
+    - ..\backend\tests\API_TEST_RESULTS.md
+    - ..\frontend\README.md
+    - ..\API_DOCS.md
+    - ..\PROJECT_REPORT.md
