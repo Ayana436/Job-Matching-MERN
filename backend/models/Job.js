@@ -2,11 +2,10 @@ import mongoose from 'mongoose';
 
 const jobSchema = new mongoose.Schema({
     title: { type: String, required: true },
-    description: { type: String, required: true },
-    requiredSkills: [String], 
+    company: { type: String, required: true },
     // 1. Change location to a simple String to allow cities
     location: { type: String, required: true }, 
-    // 2. Add workMode to handle the categories
+    requiredSkills: [String], 
     workMode: { 
         type: String, 
         enum: ['Remote', 'Hybrid', 'Office'], 
@@ -19,6 +18,8 @@ const jobSchema = new mongoose.Schema({
         trim: true,
         default: 'Negotiable'
     },
+    description: { type: String, required: true },
+    // 2. Add workMode to handle the categories
     processedKeywords: [String],
     postedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
 }, { timestamps: true });

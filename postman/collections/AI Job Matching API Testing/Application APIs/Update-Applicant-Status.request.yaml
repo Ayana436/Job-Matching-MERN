@@ -1,0 +1,18 @@
+$kind: http-request
+name: 'Update Applicant Status (Recruiter)'
+url: 'http://localhost:5000/api/jobs/applicants/{{applicantId}}'
+method: PATCH
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "status": "accepted"
+    }
+auth:
+  type: bearer
+  credentials:
+    token: '{{recruiterToken}}'
+order: 1780860500006

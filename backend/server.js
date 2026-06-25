@@ -37,7 +37,7 @@ app.options(/.*/, cors(corsOptions));
 
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 100,
+    max: 500,
     message: "Too many requests. Please try again later."
 });
 
@@ -45,11 +45,6 @@ app.use(limiter);
 
 app.use(express.json());
 app.use(requestLogger);
-
-console.log('--- System Diagnostics ---');
-console.log('Current Directory:', __dirname);
-console.log('Mongo URI Found:', process.env.MONGO_URI ? 'YES' : 'NO');
-console.log('--------------------------');
 
 const uploadsPath = path.join(__dirname, "uploads");
 
@@ -110,18 +105,11 @@ const connectDB = async () => {
 
         isDbConnected = true;
 
-        console.log(
-            'MongoDB Connected Successfully'
-        );
+isDbConnected = true;
 
     } catch (err) {
 
         isDbConnected = false;
-
-        console.error(
-            'MongoDB Connection Failed:',
-            err.message
-        );
 
     } finally {
 

@@ -1,5 +1,9 @@
 $kind: http-request
 name: New Request
-url: ""
+url: http://localhost:5000/api/analytics/application-trends
 method: GET
+auth:
+  type: bearer
+  credentials:
+    token: "{{rtoken}}"
 order: 4447214651033420

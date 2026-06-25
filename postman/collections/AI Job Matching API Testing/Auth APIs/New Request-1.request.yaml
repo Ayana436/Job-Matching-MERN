@@ -10,5 +10,11 @@ body:
 
     \  \"password\": \"123456\"\r
 
+    //   \"token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhMTljYTI1NmY0NGY2MzA3YjZmYzBhNyIsInJvbGUiOiJjYW5kaWRhdGUiLCJpYXQiOjE3ODEwMTczMTMsImV4cCI6MTc4MTEwMzcxM30.LpuCY7lmLQ7Pb7fIV2kqLfkw1isDZzhTikyQLvqpW-k\",\r
+
+    \    // \"user\": {\r
+
+    \        // \"id\": \"\",\r
+
     }"
 order: 3544588104024518

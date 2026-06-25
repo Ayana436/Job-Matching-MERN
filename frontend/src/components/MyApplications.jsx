@@ -16,7 +16,6 @@ const MyApplications = () => {
                 const res = await API.get(`/api/jobs/my-applications/${userId}`);
                 setApps(res.data);
             } catch (err) {
-                console.error("Fetch failed", err);
             } finally {
                 setLoading(false);
             }

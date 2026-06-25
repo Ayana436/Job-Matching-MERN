@@ -1,0 +1,15 @@
+$kind: http-request
+name: 'Update Profile (Candidate)'
+url: 'http://localhost:5000/api/auth/update'
+method: PUT
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: '{"name": "Updated Candidate"}'
+auth:
+  type: bearer
+  credentials:
+    token: '{{candidateToken}}'
+order: 1780860500001

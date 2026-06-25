@@ -8,3 +8,21 @@ values:
     value: ''
   - key: rtoken
     value: ''
+  - key: Token
+    value: ''
+  - key: Recruiter Token
+    value: ''
+  - key: rid
+    value: ''
+  - key: cid
+    value: ''
+  - key: Can
+    value: ''
+  - key: RecentCToken
+    value: ''
+  - key: RecentRToken
+    value: ''
+  - key: jobId
+    value: ''
+  - key: applicantId
+    value: ''

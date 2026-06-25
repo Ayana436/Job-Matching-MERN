@@ -538,3 +538,327 @@ PREMIUM B2B SAAS GLASSMORPHISM RECRUITER MASTER INTERFACE
     color: #cbd5e1;
     line-height: 1.5;
 }
+
+/* RECRUITER ACTION */
+.action-buttons {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+}
+
+.approve-btn {
+    background: #10b981;
+    border: none;
+    color: white;
+    padding: 7px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.approve-btn:hover {
+    background: #059669;
+}
+
+.reject-btn {
+    background: #ef4444;
+    border: none;
+    color: white;
+    padding: 7px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.reject-btn:hover {
+    background: #dc2626;
+}
+
+.missing-skill-item p span {
+    color: #f59e0b !important;
+    font-weight: 700;
+}
+.filter-toolbar{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    /* margin-bottom:20px; */
+    flex-wrap:wrap;
+}
+
+.filter-toolbar select{
+    padding:10px 14px;
+    border-radius:10px;
+    border:1px solid #ddd;
+    background:white;
+    cursor:pointer;
+    /* min-width:220px; */
+    /* font-size:1rem; */
+}
+.filter-toolbar select option value{
+    font-size:1rem;
+    gap:12px;
+}
+.filter-toolbar select:hover{
+    border-color:#2563eb;
+}
+
+/* === APPLICANTS LIST WRAPPER SECTION === */
+.applicants-wrapper {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 40px 20px;
+    background: #0b0b0e;
+    min-height: 100vh;
+    color: white;
+}
+
+.applicants-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.applicants-nav h2 {
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+.applicants-nav h2 span {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.btn-return {
+    background: rgba(100, 108, 255, 0.1);
+    color: #646cff;
+    border: 1.5px solid #646cff;
+    padding: 12px 24px;
+    border-radius: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 0.95rem;
+}
+
+.btn-return:hover {
+    background: rgba(100, 108, 255, 0.2);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px rgba(100, 108, 255, 0.3);
+}
+
+.search-container {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 20px;
+    width: 60%;
+}
+
+.search-container input {
+    flex: 1;
+    min-width: 250px;
+    padding: 14px 18px;
+    background: rgba(30, 30, 38, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    color: white;
+    font-size: 0.95rem;
+    outline: none;
+}
+
+.search-container input:focus {
+    border-color: #6366f1;
+    background: rgba(30, 30, 38, 0.8);
+}
+
+.search-container input::placeholder {
+    color: #64748b;
+}
+
+.results-count {
+    color: #94a3b8;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.activity-feed {
+    background: rgba(30, 30, 38, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    padding: 18px;
+    margin-bottom: 30px;
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.activity-feed h4 {
+    margin: 0;
+    color: #e2e8f0;
+    font-size: 0.9rem;
+    min-width: 100px;
+    font-weight: 600;
+}
+
+.activity-feed div {
+    flex: 1;
+    color: #cbd5e1;
+    font-size: 0.85rem;
+    padding: 8px 12px;
+    background: rgba(99, 102, 241, 0.05);
+    border-radius: 8px;
+    min-width: 200px;
+}
+
+/* Pagination styles */
+.pagination-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    flex-wrap: wrap;
+}
+
+.pagination-btn {
+    padding: 10px 16px;
+    background: rgba(99, 102, 241, 0.1);
+    color: #6366f1;
+    border: 1px solid #6366f1;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+.pagination-btn:hover {
+    background: rgba(99, 102, 241, 0.2);
+}
+
+.pagination-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.pagination-info {
+    color: #94a3b8;
+    font-size: 0.85rem;
+}
+
+/* Toast Notification Styles */
+.toast {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 16px 24px;
+    border-radius: 12px;
+    font-weight: 600;
+    z-index: 9999;
+    animation: slideIn 0.3s ease;
+}
+
+.toast.success {
+    background: rgba(16, 185, 129, 0.2);
+    color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.toast.error {
+    background: rgba(239, 68, 68, 0.2);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(400px);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* Rank Badge */
+.rank-badge {
+    background: rgba(99, 102, 241, 0.1);
+    color: #818cf8;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 0.85rem;
+}
+
+/* Responsive Table */
+@media (max-width: 1024px) {
+    .applicants-wrapper {
+        padding: 20px 10px;
+    }
+
+    .ranking-table th,
+    .ranking-table td {
+        padding: 12px 8px;
+        font-size: 0.8rem;
+    }
+
+    .activity-feed {
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .action-buttons {
+        flex-direction: column;
+    }
+
+    .action-buttons button {
+        width: 100%;
+    }
+
+    .search-container {
+        width: 100%;
+    }
+}
+
+@media (max-width: 768px) {
+    .applicants-nav {
+        flex-direction: column;
+        gap: 15px;
+        align-items: flex-start;
+    }
+
+    .btn-return {
+        width: 100%;
+        text-align: center;
+    }
+
+    .table-responsive-wrapper {
+        overflow-x: auto;
+    }
+
+    .ranking-table {
+        min-width: 900px;
+    }
+
+    .search-container {
+        width: 100%;
+    }
+
+    .applicants-wrapper {
+        padding: 20px;
+    }
+}

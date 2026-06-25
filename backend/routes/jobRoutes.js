@@ -40,10 +40,9 @@ const storage = multer.diskStorage({
 // 2. File Filter (PDF only)
 const fileFilter = (req, file, cb) => {
     const isPdf =
-    file.mimetype === "application/pdf" &&
-    path.extname(file.originalname).toLowerCase() === ".pdf";
-
-    if (file.originalname.toLowerCase().endsWith('.pdf')) {
+        file.mimetype === "application/pdf" &&
+        path.extname(file.originalname).toLowerCase() === ".pdf";
+    if (isPdf) {
         cb(null, true);
     } else {
         cb(new Error('Invalid file type. Only PDFs are allowed!'), false);
@@ -80,9 +79,14 @@ const normalizeJobPayload = (body) => ({
 });
 
 // --- NEW: GET ALL JOBS (Base Route) ---
-router.get('/', async (req, res) => {
+router.get('/', protect, authorize('recruiter', 'admin', 'candidate'), async (req, res) => {
     try {
-        const jobs = await Job.find().sort({ createdAt: -1 }).lean();
+        console.log("User id:", req.user.id);
+        const jobs = await Job.find({
+            postedBy: req.user.id
+        }).sort({ createdAt: -1 }).lean();
+
+        console.log("RECRUITER JOBS:", jobs.length);
         // We map them so the frontend always sees a 'matchScore' even if 0
         const processedJobs = jobs.map(job => ({
             ...job,
@@ -149,7 +153,6 @@ router.get('/search', async (req, res) => {
 
         res.status(200).json(processedJobs);
     } catch (err) {
-        console.error("Search Error:", err);
         res.status(500).json({ error: 'Search failed' });
     }
 });
@@ -293,7 +296,7 @@ await User.findByIdAndUpdate(
             }
         }
     },
-    { new: true }
+    { returnDocument: "after" }
 );
 
 
@@ -325,7 +328,6 @@ await ResumeHistory.create({
 res.status(200).json(sortedMatches);
 
     } catch (err) {
-        console.error("PDF Parsing Error:", err);
 
         // // delete broken upload if needed
         // if (req.file?.path && fs.existsSync(req.file.path)) {
@@ -346,11 +348,12 @@ router.delete('/resume', protect, authorize('candidate'), deleteResume);
     // ONLY Recruiters can POST
 router.post('/', protect, authorize('recruiter', 'admin'), async (req, res) => {
     try {
-        const job = new Job(normalizeJobPayload(req.body));
+        const jobPayload = normalizeJobPayload(req.body);
+        jobPayload.postedBy = req.user.id || req.user._id;
+        const job = new Job(jobPayload);
         await job.save();
         res.status(201).json({ message: "Job posted successfully!", job });
     } catch (err) {
-        console.error("Post Job Error:", err.message);
         res.status(400).json({ error: err.message || "Failed to post job" });
     }
 });
@@ -392,79 +395,101 @@ router.put('/:id', protect, authorize('recruiter', 'admin'), async (req, res) =>
 
         res.json({ message: "Job updated!", job: updatedJob });
     } catch (err) {
-        console.error("Update Job Error:", err.message);
         res.status(400).json({ error: err.message || "Update failed" });
     }
 });
 
 
-// --- Route for Quick Apply (Candidate)---
+// --- Route for Quick Apply (Candidate) ---
 router.post('/apply', protect, authorize('candidate'), async (req, res) => {
-    try{
-        // Ensure same as frontend:
-    const { jobId, matchScore, candidateSkills } = req.body;
-    const candidateId = req.user._id || req.user.id;
-
-    if (!isValidObjectId(jobId)) {
-        return res.status(400).json({ error: "Invalid job id" });
-    }
-
-    const jobExists = await Job.exists({ _id: jobId });
-
-    if (!jobExists) {
-        return res.status(404).json({ error: "Job not found" });
-    }
-
-    // 1. Check if already applied:
-    const alreadyApplied = await Application.findOne({ 
-        jobId: String(jobId), 
-        candidateId: String(candidateId) 
-    });
-        if (alreadyApplied) {
-            // use retrun to stop the function & prevent "headers already sent error"
-            return res.status(200).json({ message: "You have already applied for this position.", alreadyApplied: true });
-        }
-
-        // 2. Create the application
-        const newApp = new Application({ jobId, 
-            candidateId,
-            matchScore,       //saving the AI results
-            candidateSkills  //saving the NLP results
-        });
-        await newApp.save();
-
-        res.status(200).json({ message: "Application submitted successfully!" });
-    }catch (err) {
-        console.error("Apply Error:", err);
-        // Ensure only 1 response is sent!
-        if (!res.headersSent){
-        return res.status(500).json({ error: "Server error during application." });
-    }
-}});
-
-// Creates resume history API
-router.get(
-    '/resume-history',
-    protect,
-    authorize('candidate'),
-    async (req, res) => {
         try {
+            console.log("APPLY BODY:", req.body);
+        console.log("USER:", req.user);
+            const {
+                jobId,
+                jobTitle,
+                jobSkills,
+                matchScore = 0,
+                candidateSkills = []
+            } = req.body;
+            const candidateId =
+                req.user._id || req.user.id;
+            // Validate Job ID
+            if (!isValidObjectId(jobId)) {
+                return res.status(400).json({
+                    error: "Invalid job id"
+                });
+            }
 
-            const history = await ResumeHistory.find({
-                candidateId: req.user.id
-            }).sort({ createdAt: -1 });
+            // Check Job Exists
+            const job = await Job.findById(jobId);
+            if (!job) {
+                return res.status(404).json({
+                    error: "Job not found"
+                });
+            }
 
-            res.status(200).json({
-                history
+            // Prevent application without AI matching
+            if (
+                !Array.isArray(candidateSkills) ||
+                candidateSkills.length === 0
+            ) {
+                return res.status(400).json({
+                    error:
+                        "Please upload and analyze a resume before applying."
+                });
+            }
+
+            // Prevent duplicate applications
+            const alreadyApplied =
+                await Application.findOne({
+                    jobId: req.body.jobId,
+                    candidateId: req.user.id || req.user._id
+                });
+            if (alreadyApplied) {
+                return res.status(200).json({
+                    message:
+                        "You have already applied for this position.",
+                    alreadyApplied: true
+                });
+            }
+
+            // Create application
+            const newApplication = await Application.create({
+                    jobId: job._id,
+                    candidateId,
+                    jobTitle: job.title,
+                    jobSkills: job.requiredSkills || [],
+                    matchScore: Number(matchScore) || 0,
+                    candidateSkills
+                });
+
+            return res.status(201).json({
+                success: true,
+                message:
+                    "Application submitted successfully!",
+                application: newApplication
             });
 
         } catch (err) {
+            console.error("Apply error:", err);
+            return res.status(500).json({
+                error: err.message || "Failed to submit application"
+            });
+        }
+    }
+);
 
-            console.error(
-                'Resume history error:',
-                err
-            );
-
+// Creates resume history API
+router.get('/resume-history', protect, authorize('candidate', 'recruiter'), async (req, res) => {
+        try {
+            const history = await ResumeHistory.find({
+                candidateId: req.user.id
+            }).sort({ createdAt: -1 });
+            res.status(200).json({
+                history
+            });
+        } catch (err) {
             res.status(500).json({
                 error:
                     'Failed to fetch resume history'
@@ -484,6 +509,7 @@ router.get('/my-applications/:candidateId', protect, async (req, res) => {
             return res.status(400).json({ error: "Invalid candidate id" });
         }
 
+        // Candidate can only view own applications, recruiters can view all
         if (req.user.role !== 'recruiter' && String(req.user.id) !== String(candidateId)) {
             return res.status(403).json({ error: "You can only view your own applications" });
         }
@@ -495,65 +521,55 @@ const applications = await Application.find({
     path: "candidateId",
     select: "name email resume"
 })
-.populate(
-    'jobId',
-    'title location company workMode'
-)
-.sort({ createdAt: -1 });
-            
-        res.status(200).json(applications);
+.populate({
+    path: "jobId",
+    select: `title description location workMode jobType experienceLevel salary requiredSkills createdAt`
+})
+.sort({ createdAt: -1 })
+.lean();
+            const validApplications = applications.filter(app => app && app.jobId && app.candidateId);
+
+        return res.status(200).json(validApplications);
     } catch (err) {
-        res.status(500).json({ error: "Failed to fetch your applications" });
+        return res.status(500).json({ error: "Failed to fetch your applications" });
     }
 });
 
 // Pulls Score to send Recruiter
 // Safer implementation blocking schema casting crashes
-router.get('/applicants', protect, authorize('recruiter'), async (req, res) => {
-    try {
-        // Fetch raw application objects without processing population yet
-        const rawApps = await Application.find().sort({ createdAt: -1 }).lean();
+router.get(
+    '/applicants',
+    protect,
+    authorize('recruiter', 'admin'),
+    async (req, res) => {
 
-        // Dynamically populate documents to prevent CastErrors from dropping to catch()
-        const apps = await Application.find()
-            .populate({
-                path: 'jobId',
-                select: 'title location',
-                options: { retainNullValues: true }
-            })
-            .populate({
-                path: 'candidateId',
-                select: 'name email',
-                options: { retainNullValues: true }
-            })
-            .sort({ createdAt: -1 })
-            .lean();
+        try {
 
-        // Strict validation: exclude broken, null, or malformed relational documents
-        const validApps = apps.filter(app => {
-            return app && 
-                    app.jobId && 
-                    typeof app.jobId === 'object' && 
-                    app.candidateId && 
-                    typeof app.candidateId === 'object';
-        });
+            const apps = await Application.find()
+                .populate(
+                    'jobId',
+                    'title location workMode company requiredSkills'
+                )
+                .populate(
+                    'candidateId',
+                    'name email resume'
+                )
+                .sort({ createdAt: -1 });
 
-        res.set({
-            "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
-            "Pragma": "no-cache",
-            "Expires": "0"
-        });
+            console.log("TOTAL APPS:", apps.length);
 
-        // Always log clean diagnostics in the terminal console to monitor operations
-        console.log(`[Dashboard Sync] Raw Apps: ${apps.length} | Valid Filtered Apps: ${validApps.length}`);
-        
-        res.status(200).json(validApps);
-    } catch (err) {
-        console.error("Critical Backend Applicants Fetch Error:", err);
-        // Fallback: return a clean 200 array instead of a 500 to keep the dashboard stable
-        res.status(200).json([]); 
+            return res.status(200).json(apps);
+
+        } catch (err) {
+
+            console.error(err);
+
+            return res.status(500).json({
+                error: err.message
+            });
+        }
     }
-});
+);
 // GET all applicants (Recruiter Only)
 
 // Route to update application status (Approve/Reject)
@@ -692,11 +708,6 @@ router.patch(
 
         } catch (err) {
 
-            console.error(
-                "Status Update Error:",
-                err
-            );
-
             res.status(500).json({
                 error:
                     "Server failed to update status"
@@ -729,11 +740,6 @@ router.get(
             return res.sendFile(filePath);
 
         } catch (err) {
-
-            console.error(
-                'Resume view error:',
-                err
-            );
 
             res.status(500).json({
                 error:

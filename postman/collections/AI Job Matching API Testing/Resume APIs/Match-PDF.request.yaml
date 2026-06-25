@@ -1,0 +1,19 @@
+$kind: http-request
+name: Match PDF Resume (Candidate)
+url: http://localhost:5000/api/jobs/match-pdf
+method: POST
+body:
+  type: formdata
+  content:
+    - type: file
+      key: resume
+      src:
+        - postman-cloud:///1f159ebe-45b4-4790-b108-4fb3e51e0192
+      contentType: file
+      description: Upload a PDF resume file here
+      disabled: false
+auth:
+  type: bearer
+  credentials:
+    token: "{{RecentCToken}}"
+order: 1780860500004

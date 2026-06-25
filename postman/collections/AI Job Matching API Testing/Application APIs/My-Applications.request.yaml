@@ -1,0 +1,9 @@
+$kind: http-request
+name: Get My Applications (Candidate)
+url: http://localhost:5000/api/jobs/my-applications/{{applicantId}}
+method: GET
+auth:
+  type: bearer
+  credentials:
+    token: "{{RecentCToken}}"
+order: 1780860500005

@@ -3,11 +3,6 @@ import { useNavigate } from "react-router-dom";
 import API from "../api";
 import JobCard from "../components/JobCard";
 
-
-// const token = localStorage.getItem("token");
-
-// const user = JSON.parse(localStorage.getItem("user"));
-
 const defaultChips = [
     "AI",
     "Frontend",
@@ -42,50 +37,31 @@ const getStoredJson = (key, fallback) => {
 };
 
 const enrichJobsWithApplications = (jobList, applications = []) => {
-
     return jobList.map((job) => {
-
         const application = applications.find(
             (app) => String(app.jobId?._id || app.jobId) === String(job._id)
         );
 
         return {
             ...job,
-
             applied: Boolean(application),
-
-            applicationStatus:
-                application?.status || null,
-
-            applicationId:
-                application?._id || null,
-
-                confidence:
-                job.matchScore > 0
-                    ? Math.min(
-                            98,
-                            Math.max(50, job.matchScore + 8)
-                        )
-                    : null,
-
-                    matchedSkills:
-                        job.matchedSkills || [],
-
-                    missingSkills:
-                        job.missingSkills || []
+            applicationStatus: application?.status || null,
+            applicationId: application?._id || null,
+            confidence: job.matchScore > 0 ? Math.min(98, Math.max(50, job.matchScore + 8)) : null,
+            matchedSkills: job.matchedSkills || [],
+            missingSkills: job.missingSkills || []
         };
     });
 };
 
-// Basic candidate dashboard logic
 const CandidateView = () => {
     const navigate = useNavigate();
     const user = getStoredJson("user", null);
     const userId = user?.id || user?._id;
 
-const [allJobs, setAllJobs] = useState([]);
-const [jobs, setJobs] = useState([]);
-const [hasMatchedResults, setHasMatchedResults] = useState(false);
+    const [allJobs, setAllJobs] = useState([]);
+    const [jobs, setJobs] = useState([]);
+    const [hasMatchedResults, setHasMatchedResults] = useState(false);
     const [applications, setApplications] = useState([]);
     const [resume, setResume] = useState(null);
     const [resumeHistory, setResumeHistory] = useState([]);
@@ -105,157 +81,136 @@ const [hasMatchedResults, setHasMatchedResults] = useState(false);
 
     const jobsPerPage = 6;
     const resumesPerPage = 3;
+
     const notify = useCallback((message, type = "success") => {
         setToast({ message, type });
         window.setTimeout(() => setToast(null), 2600);
     }, []);
 
-const fetchJobs = useCallback(async (preserveMatched = false) => {
-    try {
-        const res = await API.get("/api/jobs");
-
-        const enrichedJobs = enrichJobsWithApplications(
-            res.data,
-            applications
-        );
-
-        setAllJobs(enrichedJobs);
-
-        // ONLY overwrite visible jobs when not preserving AI matched jobs
-        if (!preserveMatched) {
-            setJobs(enrichedJobs);
-        }
-
-    } catch (err) {
-        console.error("Error fetching jobs:", err);
-    }
-}, [applications]);
-
-const fetchResumeHistory = useCallback(async () => {
-
-    try {
-        const token = localStorage.getItem("token");
-
-        const res = await API.get(
-            "/api/jobs/resume-history",
-            {
-                headers: {
-                    Authorization: `Bearer ${token}`
-                }
-            }
-        );
-
-        setResumeHistory(
-            res.data.history || []
-        );
-    } catch (err) {
-        console.error(
-            "Resume history fetch failed:",
-            err
-        );
-    }
-}, []);
-
-
-const fetchApplications = useCallback(async () => {
-    if (!userId) return [];
-
-    try {
-        const token = localStorage.getItem("token");
-
-        const res = await API.get(
-            `/api/jobs/my-applications/${userId}`,
-            {
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                },
-            }
-        );
-
-        setApplications(res.data);
-
-        // IMPORTANT:
-        // refresh ALL jobs using latest applications
-        setAllJobs((prev) =>
-            enrichJobsWithApplications(prev, res.data)
-        );
-
-        setJobs((prev) =>
-            enrichJobsWithApplications(prev, res.data)
-        );
-
-        return res.data;
-
-    } catch (err) {
-        console.error("Error fetching applications:", err);
-        notify("Could not refresh applications.", "error");
-        return [];
-    }
-}, [notify, userId]);
-
-useEffect(() => {
-    let isMounted = true;
-
-    const loadInitialData = async () => {
-        setJobsLoading(true);
-
+    // --- DECOUPLED CANDIDATE API OPERATIONS ---
+    const fetchJobs = useCallback(async (preserveMatched = false) => {
         try {
             const token = localStorage.getItem("token");
+            if (!token) return;
 
-            const jobsRes = await API.get("/api/jobs", {
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                },
+            const res = await API.get("/api/jobs", {
+                headers: { Authorization: `Bearer ${token}` }
             });
 
-            let appsData = [];
-
-            if (userId) {
-                const appsRes = await API.get(`/api/jobs/my-applications/${userId}`);
-                appsData = appsRes.data;
-
-                if (isMounted) {
-                    setApplications(appsData);
-                }
-            }
-
-            if (isMounted) {
-                const enrichedJobs = enrichJobsWithApplications(jobsRes.data, appsData);
-
-                setAllJobs(enrichedJobs);
-                setJobs(enrichedJobs);
+            if (res.data && Array.isArray(res.data) && res.data.length > 0) {
+                setApplications(currentApps => {
+                    const enrichedJobs = enrichJobsWithApplications(res.data || [], currentApps);
+                    setAllJobs(enrichedJobs);
+                    if (!preserveMatched) {
+                        setJobs(enrichedJobs);
+                    }
+                    return currentApps;
+                });
             }
         } catch (err) {
-            console.error("Error loading candidate data:", err);
-        } finally {
-            if (isMounted) {
-                setJobsLoading(false);
+            console.error("Error fetching available jobs:", err.message);
+        }
+    }, []); 
+
+    const fetchResumeHistory = useCallback(async () => {
+        try {
+            const token = localStorage.getItem("token");
+            if (!token) return;
+            const res = await API.get("/api/jobs/resume-history", {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            setResumeHistory(res.data.history || []);
+        } catch (err) {
+            console.error("Error fetching resume history:", err.message);
+        }
+    }, []); 
+
+    const fetchApplications = useCallback(async () => {
+        if (!userId) return [];
+        try {
+            const token = localStorage.getItem("token");
+            if (!token) return [];
+            const res = await API.get(`/api/jobs/my-applications/${userId}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            
+            if (res.data && Array.isArray(res.data)) {
+                setApplications(res.data);
+                setAllJobs(prev => enrichJobsWithApplications(prev, res.data));
+                setJobs(prev => enrichJobsWithApplications(prev, res.data));
             }
+            return res.data;
+        } catch (err) {
+            console.error("Error fetching applications:", err.message);
+            return [];
         }
-    };
+    }, [userId]); 
 
-    loadInitialData();
-    fetchResumeHistory();
+    // --- INITIALIZATION LIFECYCLE ---
+    useEffect(() => {
+        let isMounted = true;
 
-    return () => {
-        isMounted = false;
-    };
-}, [fetchResumeHistory, userId]);
+        const loadInitialCandidateData = async () => {
+            if (hasMatchedResults) return;
+            setJobsLoading(true);
+            try {
+                const token = localStorage.getItem("token");
+                if (!token) return;
 
-useEffect(() => {
-    const interval = setInterval(() => {
-        
-        if (!hasMatchedResults && selectedChips.length === 0) {
-            fetchJobs();
-        }
+                const headers = { Authorization: `Bearer ${token}` };
 
-        fetchApplications();
+                const [jobsRes, appsRes] = await Promise.all([
+                    API.get("/api/jobs", { headers: {
+                        Authorization: `Bearer ${token}`
+                    } }).catch(() => ({ data: [] })),
+                    userId ? API.get(`/api/jobs/my-applications/${userId}`, { headers }).catch(() => ({ data: [] })) : { data: [] }
+                ]);
 
-    }, 5000);
+                if (isMounted) {
+                    const appsData = appsRes.data || [];
+                    setApplications(appsData);
 
-    return () => clearInterval(interval);
+                    if (jobsRes.data && Array.isArray(jobsRes.data) && jobsRes.data.length > 0) {
+                        const enrichedJobs = enrichJobsWithApplications(jobsRes.data, appsData);
+                        setAllJobs(enrichedJobs);
+                        setJobs(enrichedJobs);
+                    }
+                }
+            } catch (err) {
+                console.error("Initialization loop error:", err.response?.data?.error || err.message || err);
+            } finally {
+                if (isMounted) setJobsLoading(false);
+            }
+        };
 
-}, [fetchJobs, fetchApplications, hasMatchedResults, selectedChips.length]);
+        loadInitialCandidateData();
+        fetchResumeHistory();
+
+        return () => {
+            isMounted = false;
+        };
+    }, [fetchResumeHistory, hasMatchedResults, userId]); 
+
+    // --- BACKGROUND SYNCER (30-SECOND POOL) ---
+    useEffect(() => {
+        let isMounted = true;
+        let intervalId = null;
+
+        const executePollBatch = async () => {
+            if (!isMounted) return;
+            if (!hasMatchedResults && (!selectedChips || selectedChips.length === 0) && !searchQuery) {
+                await fetchJobs(true);
+            }
+            await fetchApplications();
+        };
+
+        intervalId = setInterval(executePollBatch, 30000);
+
+        return () => {
+            isMounted = false;
+            if (intervalId) clearInterval(intervalId);
+        };
+    }, [hasMatchedResults, selectedChips?.length, searchQuery, fetchApplications, fetchJobs]);
 
     useEffect(() => {
         localStorage.setItem("savedJobs", JSON.stringify(savedJobs));
@@ -269,64 +224,41 @@ useEffect(() => {
         localStorage.setItem("theme", theme);
     }, [theme]);
 
-    // LOGOUT + TOKEN EXPIRY:
+    // LOGOUT + TOKEN EXPIRY
     useEffect(() => {
-
-    const token = localStorage.getItem("token");
-
-    if (!token) {
-        navigate("/auth");
-        return;
-    }
-
-    try {
-
-        const payload = JSON.parse(
-            atob(token.split(".")[1])
-        );
-
-        const expiry = payload.exp * 1000;
-
-        // TOKEN EXPIRED
-        if (Date.now() >= expiry) {
-
-            localStorage.removeItem("token");
-            localStorage.removeItem("user");
-
-            notify("Session expired. Please login again.", "error");
-
+        const token = localStorage.getItem("token");
+        if (!token) {
             navigate("/auth");
-
             return;
         }
 
-        // AUTO LOGOUT TIMER
-        const timeout = expiry - Date.now();
+        try {
+            const payload = JSON.parse(atob(token.split(".")[1]));
+            const expiry = payload.exp * 1000;
 
-        const logoutTimer = setTimeout(() => {
+            if (Date.now() >= expiry) {
+                localStorage.removeItem("token");
+                localStorage.removeItem("user");
+                notify("Session expired. Please login again.", "error");
+                navigate("/auth");
+                return;
+            }
 
+            const timeout = expiry - Date.now();
+            const logoutTimer = setTimeout(() => {
+                localStorage.removeItem("token");
+                localStorage.removeItem("user");
+                notify("Session expired. Logged out.", "error");
+                navigate("/auth");
+            }, timeout);
+
+            return () => clearTimeout(logoutTimer);
+        } catch (err) {
             localStorage.removeItem("token");
             localStorage.removeItem("user");
-
-            notify("Session expired. Logged out.", "error");
-
             navigate("/auth");
-
-        }, timeout);
-
-        return () => clearTimeout(logoutTimer);
-
-    } catch (err) {
-
-        console.error("Token decode failed:", err);
-
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
-
-        navigate("/auth");
-    }
-
-}, [navigate, notify]);
+        }
+    }, [navigate, notify]);
 
     const saveRecentSearch = (query) => {
         if (!query.trim()) return;
@@ -334,30 +266,20 @@ useEffect(() => {
     };
 
     const saveSearch = () => {
+        if (!searchQuery.trim()) return;
 
-    if (!searchQuery.trim()) return;
+        const updated = [
+            searchQuery,
+            ...savedSearches.filter((item) => item !== searchQuery)
+        ].slice(0, 10);
 
-    const updated = [
-        searchQuery,
-        ...savedSearches.filter(
-            (item) => item !== searchQuery
-        )
-    ].slice(0, 10);
-
-    setSavedSearches(updated);
-
-    localStorage.setItem(
-        "savedSearches",
-        JSON.stringify(updated)
-    );
-
-    notify("Search saved");
-};
+        setSavedSearches(updated);
+        localStorage.setItem("savedSearches", JSON.stringify(updated));
+        notify("Search saved");
+    };
 
     const runSearch = async (query = searchQuery) => {
         const cleanQuery = query.trim();
-        // setVisibleCount(8);
-
         if (!cleanQuery) {
             setJobsPage(1);
             setJobs(allJobs);
@@ -371,159 +293,105 @@ useEffect(() => {
             setJobs(enrichJobsWithApplications(res.data, applications));
             saveRecentSearch(cleanQuery);
         } catch (err) {
-            console.error("Search failed:", err);
             notify("Search failed.", "error");
         } finally {
             setJobsLoading(false);
         }
     };
 
-const handleChipSelect = async (chip) => {
+    const handleChipSelect = async (chip) => {
+        let updatedChips = [];
+        if (selectedChips.includes(chip)) {
+            updatedChips = selectedChips.filter((c) => c !== chip);
+        } else {
+            updatedChips = [...selectedChips, chip];
+        }
 
-    let updatedChips = [];
+        setSelectedChips(updatedChips);
+        const query = updatedChips.join(", ");
+        setSearchQuery(query);
 
-    // REMOVE chip if already selected
-    if (selectedChips.includes(chip)) {
-        updatedChips = selectedChips.filter((c) => c !== chip);
-    } else {
-        // ADD chip
-        updatedChips = [...selectedChips, chip];
-    }
+        const newSuggestions = updatedChips.flatMap((selected) => chipSuggestions[selected] || []);
+        setSuggestedChips([...new Set(newSuggestions)].filter((item) => !updatedChips.includes(item)));
 
-    setSelectedChips(updatedChips);
-
-    const query = updatedChips.join(", ");
-
-    setSearchQuery(query);
-
-    // update suggestions
-    const newSuggestions = updatedChips.flatMap(
-        (selected) => chipSuggestions[selected] || []
-    );
-
-    setSuggestedChips(
-        [...new Set(newSuggestions)].filter(
-            (item) => !updatedChips.includes(item)
-        )
-    );
-
-    // IF NO CHIPS SELECTED
-    if (updatedChips.length === 0) {
-
-        setHasMatchedResults(false);
-
-        setJobsPage(1);
-        setJobs(allJobs);
-
-        return;
-    }
-
-    // SEARCH USING CHIPS
-    try {
-
-        setJobsLoading(true);
-
-        const res = await API.get(
-            `/api/jobs/search?q=${encodeURIComponent(query)}`
-        );
-
-        setJobs(
-            enrichJobsWithApplications(res.data, applications)
-        );
-        setJobsPage(1);
-
-    } catch (err) {
-
-        console.error("Chip search failed:", err);
-
-    } finally {
-
-        setJobsLoading(false);
-    }
-};
-
-const handleResumeUpload = async () => {
-    if (!resume) {
-        notify("Please choose a PDF file first.", "error");
-        return;
-    }
-
-    const formData = new FormData();
-    formData.append("resume", resume);
-
-    try {
-        setLoading(true);
-
-        const res = await API.post("/api/jobs/match-pdf", formData);
-
-        const matchedJobs = enrichJobsWithApplications(res.data, applications);
-
-        setJobsPage(1);
-        setJobs([...matchedJobs]);
-        setHasMatchedResults(true);
-
-        await fetchResumeHistory();
-
-        notify("Resume analyzed. Best matches are ranked first.");
-    } catch (err) {
-        console.error("Resume upload failed:", err);
-        notify("Failed to upload resume.", "error");
-    } finally {
-        setLoading(false);
-    }
-};
-
-    const handleApply = async (jobId, matchScore) => {
-        if (!userId) {
-            notify("Please login first.", "error");
-            navigate("/auth");
-            return false;
+        if (updatedChips.length === 0) {
+            setHasMatchedResults(false);
+            setJobsPage(1);
+            setJobs(allJobs);
+            return;
         }
 
         try {
-            const token = localStorage.getItem("token");
-
-            const res = await API.post(
-                "/api/jobs/apply",
-            {
-                jobId,
-                matchScore,
-                candidateSkills: jobs.find((job) => job._id === jobId)
-                    ?.matchedSkills || [],
-            },
-            {
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                },
-            }
-        );
-
-            notify(res.data.message || "Application submitted.");
-            await fetchApplications();
-            return true;
+            setJobsLoading(true);
+            const res = await API.get(`/api/jobs/search?q=${encodeURIComponent(query)}`);
+            setJobs(enrichJobsWithApplications(res.data, applications));
+            setJobsPage(1);
         } catch (err) {
-            console.error("Apply failed:", err);
-            notify(err.response?.data?.error || "Application failed.", "error");
-            return false;
+            console.error(err);
+        } finally {
+            setJobsLoading(false);
         }
     };
 
-const toggleSavedJob = (jobId) => {
-    const alreadySaved = savedJobs.includes(jobId);
+    const handleResumeUpload = async () => {
+        if (!resume) {
+            notify("Please choose a PDF file first.", "error");
+            return;
+        }
 
-    setSavedJobs((prev) =>
-        alreadySaved
-            ? prev.filter((id) => id !== jobId)
-            : [...prev, jobId]
-    );
+        const formData = new FormData();
+        formData.append("resume", resume);
 
-    notify(
-        alreadySaved
-            ? "Removed from saved jobs"
-            : "Job saved successfully",
-        "success"
-    );
-};
+        try {
+            setLoading(true);
+            const res = await API.post("/api/jobs/match-pdf", formData);
+            const matchedJobs = enrichJobsWithApplications(res.data, applications);
+
+            setJobsPage(1);
+            setJobs([...matchedJobs]);
+            setHasMatchedResults(true);
+
+            await fetchResumeHistory();
+            notify("Resume analyzed. Best matches are ranked first.");
+        } catch (err) {
+            notify("Failed to upload resume.", "error");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleApply = async (jobId, matchScore, candidateSkills) => {
+        try {
+            const token = localStorage.getItem("token");
+            if (!token) return;
+
+            const res = await API.post("/api/jobs/apply", {
+                jobId,
+                matchScore,
+                candidateSkills
+            }, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+
+            if (res.status === 200 || res.status === 201) {
+                notify("Application submitted successfully!");
+                fetchApplications();
+            }
+        } catch (err) {
+            console.error("APPLY ERROR:", err);
+            if (err.response && err.response.status === 400) {
+                notify(err.response.data?.message || "You have already applied for this job!", "error");
+            } else {
+                notify("Failed to apply for the job. Please try again.", "error");
+            }
+        }
+    };
+
+    const toggleSavedJob = (jobId) => {
+        const alreadySaved = savedJobs.includes(jobId);
+        setSavedJobs((prev) => alreadySaved ? prev.filter((id) => id !== jobId) : [...prev, jobId]);
+        notify(alreadySaved ? "Removed from saved jobs" : "Job saved successfully", "success");
+    };
 
     const handleLogout = () => {
         localStorage.removeItem("token");
@@ -531,243 +399,157 @@ const toggleSavedJob = (jobId) => {
         navigate("/auth");
     };
 
-const handleDeleteResume = async (resumeItem) => {
-    try {
-        if (!resumeItem?._id) {
-            notify("Resume record is missing. Refresh and try again.", "error");
-            return;
+    const handleDeleteResume = async (resumeItem) => {
+        try {
+            if (!resumeItem?._id) {
+                notify("Resume record is missing. Refresh and try again.", "error");
+                return;
+            }
+
+            const shouldDelete = window.confirm(`Delete ${resumeItem.fileName || "this resume"}?`);
+            if (!shouldDelete) return;
+
+            await API.delete(`/api/jobs/resume/${resumeItem._id}`);
+
+            setResume(null);
+            setResumeHistory((prev) => prev.filter((item) => item._id !== resumeItem._id));
+            setResumeCurrentPage((prev) =>
+                Math.max(1, Math.min(prev, Math.ceil((resumeHistory.length - 1) / resumesPerPage) || 1))
+            );
+            setJobsPage(1);
+            setJobs(allJobs);
+            setHasMatchedResults(false);
+
+            notify("Resume deleted successfully");
+        } catch (err) {
+            notify(err.response?.data?.message || err.response?.data?.error || "Failed to delete resume", "error");
+        }
+    };
+
+    const appliedJobs = useMemo(() => allJobs.filter((job) => job.applied), [allJobs]);
+
+    const pendingJobs = useMemo(() => appliedJobs.filter((job) => {
+        const s = String(job.applicationStatus || '').toLowerCase().trim();
+        return s === "pending" || s === "reviewed" || s === "applied";
+    }), [appliedJobs]);
+
+    const acceptedJobs = useMemo(() => appliedJobs.filter((job) => {
+        const s = String(job.applicationStatus || '').toLowerCase().trim();
+        return s === "accepted" || s === "decision";
+    }), [appliedJobs]);
+
+    const rejectedJobs = useMemo(() => appliedJobs.filter(
+        (job) => String(job.applicationStatus || '').toLowerCase().trim() === "rejected"
+    ), [appliedJobs]);
+
+    // --- PRECISE FILTERING FIX ---
+    const filteredJobs = useMemo(() => {
+        const applicationTabs = ["saved", "applications", "pending", "accepted", "rejected"];
+        let filtered = applicationTabs.includes(activeTab) ? [...allJobs] : [...jobs];
+        const isMainTab = !applicationTabs.includes(activeTab);
+
+        const hasActiveFilters = 
+            (selectedChips && selectedChips.length > 0) || 
+            (searchQuery && searchQuery.trim() !== "") ||
+            hasMatchedResults;
+
+        if (isMainTab && !hasActiveFilters) {
+            return filtered;
         }
 
-        const shouldDelete = window.confirm(
-            `Delete ${resumeItem.fileName || "this resume"}?`
-        );
+        if (activeTab === "saved") {
+            return filtered.filter(job => savedJobs.includes(job._id));
+        }
+        if (activeTab === "applications") {
+            return filtered.filter(job => job.applied);
+        }
+        if (activeTab === "pending") {
+            return filtered.filter(job => {
+                const status = String(job.applicationStatus || '').toLowerCase().trim();
+                return status === "pending" || status === "applied" || status === "reviewed" || status === "review";
+            });
+        }
+        if (activeTab === "accepted") {
+            return filtered.filter(job => {
+                const status = String(job.applicationStatus || '').toLowerCase().trim();
+                return status === "accepted" || status === "decision";
+            });
+        }
+        if (activeTab === "rejected") {
+            return filtered.filter(job => {
+                const status = String(job.applicationStatus || '').toLowerCase().trim();
+                return status === "rejected";
+            });
+        }
 
-        if (!shouldDelete) return;
+        if (isMainTab && hasActiveFilters) {
+            return filtered.filter(job => {
+                const matchesSearch = searchQuery.trim() 
+                    ? String(job.title || '').toLowerCase().includes(searchQuery.toLowerCase().trim()) ||
+                    String(job.company || '').toLowerCase().includes(searchQuery.toLowerCase().trim())
+                    : true;
+                
+                const jobSkillsArray = job.requiredSkills || job.matchedSkills || job.skills || [];
+                const matchesChips = selectedChips && selectedChips.length > 0
+                    ? selectedChips.some(chip => 
+                        jobSkillsArray.some(skill => 
+                            String(skill.name || skill).toLowerCase().trim() === String(chip).toLowerCase().trim()
+                        )
+                    )
+                    : true;
 
-        await API.delete(`/api/jobs/resume/${resumeItem._id}`);
+                return matchesSearch && matchesChips;
+            });
+        }
 
-        setResume(null);
-        setResumeHistory((prev) =>
-            prev.filter((item) => item._id !== resumeItem._id)
-        );
-        setResumeCurrentPage((prev) =>
-            Math.max(
-                1,
-                Math.min(
-                    prev,
-                    Math.ceil((resumeHistory.length - 1) / resumesPerPage) || 1
-                )
-            )
-        );
+        return filtered;
+    }, [allJobs, jobs, savedJobs, activeTab, searchQuery, selectedChips, hasMatchedResults]);
+
+    useEffect(() => {
         setJobsPage(1);
-        setJobs(allJobs);
-        setHasMatchedResults(false);
+    }, [activeTab, searchQuery, selectedChips.length, hasMatchedResults]);
 
-        notify("Resume deleted successfully");
-    } catch (err) {
-        console.error("DELETE ERROR:", err.response?.data || err);
-
-        notify(
-            err.response?.data?.message ||
-            err.response?.data?.error ||
-            "Failed to delete resume",
-            "error"
-        );
-    }
-};
-
-const appliedJobs = allJobs.filter((job) => job.applied);
-
-const pendingJobs = appliedJobs.filter(
-    (job) =>
-        String(job.applicationStatus).toLowerCase() === "pending"
-);
-
-const acceptedJobs = appliedJobs.filter(
-    (job) =>
-        String(job.applicationStatus).toLowerCase() === "accepted"
-);
-
-const rejectedJobs = appliedJobs.filter(
-    (job) =>
-        String(job.applicationStatus).toLowerCase() === "rejected"
-);
-
-const filteredJobs = useMemo(() => {
-
-    const applicationTabs = [
-        "saved",
-        "applications",
-        "pending",
-        "accepted",
-        "rejected"
-    ];
-
-    let filtered = applicationTabs.includes(activeTab)
-        ? [...allJobs]
-        : [...jobs];
-
-    // SAVED JOBS
-    if (activeTab === "saved") {
-        filtered = filtered.filter(
-            (job) =>
-                savedJobs.includes(job._id)
-        );
-    }
-
-    // ALL APPLIED JOBS
-    if (activeTab === "applications") {
-        filtered = filtered.filter(
-            (job) => job.applied
-        );
-    }
-
-    // PENDING
-    if (activeTab === "pending") {
-        filtered = filtered.filter(
-            (job) =>
-                String(
-                job.applicationStatus).toLowerCase() === "pending"
-        );
-    
-    }
-
-    // ACCEPTED
-    if (activeTab === "accepted") {
-        filtered = filtered.filter(
-            (job) =>
-                String(
-                    job.applicationStatus).toLowerCase() === "accepted"
-        );
-    }
-
-    // REJECTED
-    if (activeTab === "rejected") {
-        filtered = filtered.filter(
-            (job) =>
-                String(job.applicationStatus
-                ).toLowerCase() === "rejected"
-        );
-    }
-
-    // DEFAULT
-    return filtered;
-
-}, [allJobs, jobs, savedJobs, activeTab]);
-
-useEffect(() => {
-    setJobsPage(1);
-}, [activeTab, searchQuery, selectedChips.length, hasMatchedResults]);
-
-    // Profile Completion
     const profileCompletion = useMemo(() => {
-
-    let score = 0;
-
-    if (user?.name) score += 25;
-
-    if (user?.email) score += 25;
-
-    if (resumeHistory.length > 0) score += 25;
-
-    if (applications.length > 0) score += 25;
-
-    return score;
-
-}, [user, resumeHistory, applications]);
-    
+        let score = 0;
+        if (user?.name) score += 25;
+        if (user?.email) score += 25;
+        if (resumeHistory.length > 0) score += 25;
+        if (applications.length > 0) score += 25;
+        return score;
+    }, [user, resumeHistory, applications]);
+        
     const averageMatch = jobs.length
         ? Math.round(jobs.reduce((sum, job) => sum + (job.matchScore || 0), 0) / jobs.length)
         : 0;
 
-// RESUME HISTORY PAGINATION
-const totalResumePages = Math.ceil(
-    resumeHistory.length / resumesPerPage
-);
+    const totalResumePages = Math.ceil(resumeHistory.length / resumesPerPage);
+    const resumeStartIndex = (resumeCurrentPage - 1) * resumesPerPage;
+    const paginatedResumeHistory = resumeHistory.slice(resumeStartIndex, resumeStartIndex + resumesPerPage);
 
-const resumeStartIndex =
-    (resumeCurrentPage - 1) * resumesPerPage;
+    const jobsStartIndex = (jobsPage - 1) * jobsPerPage;
+    const visibleJobs = filteredJobs.slice(jobsStartIndex, jobsStartIndex + jobsPerPage);
 
-const paginatedResumeHistory =
-    resumeHistory
-        .slice(
-            resumeStartIndex,
-            resumeStartIndex + resumesPerPage
-        );
+    const getResumeUrl = (filePath) => {
+        if (!filePath) return "";
+        const cleanedPath = filePath.replace(/\\/g, "/");
+        const filename = cleanedPath.split("/").pop();
+        const baseUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
+        return `${baseUrl}/uploads/${filename}`;
+    };
 
-const totalJobPages = Math.ceil(
-    filteredJobs.length / jobsPerPage
-);
+    const getStatusClass = (statusStr) => {
+        const status = String(statusStr || '').toLowerCase().trim();
+        if (status === 'accepted' || status === 'decision') return 'accepted';
+        if (status === 'rejected') return 'rejected';
+        return 'pending';
+    };
 
-const jobsStartIndex =
-    (jobsPage - 1) * jobsPerPage;
-
-const visibleJobs =
-    filteredJobs.slice(
-        jobsStartIndex,
-        jobsStartIndex + jobsPerPage
-    );
-
-const getResumeUrl = (filePath) => {
-    if (!filePath) return "";
-
-    const cleanedPath = filePath.replace(/\\/g, "/");
-    const filename = cleanedPath.split("/").pop();
-    const baseUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
-
-    return `${baseUrl}/uploads/${filename}`;
-};
-
-// STATUS BADGE LOGIC
-const getStatusClass = (status) => {
-
-    if (!status) return "status-pending";
-
-    switch (status.toLowerCase()) {
-
-        case "accepted":
-            return "status-accepted";
-
-        case "rejected":
-            return "status-rejected";
-
-        case "review":
-        case "reviewed":
-            return "status-review";
-
-        default:
-            return "status-pending";
-    }
-};
-
-const getTimelineStep = (status) => {
-    switch ((status || "").toLowerCase()) {
-
-        case "pending":
-            return 1;
-
-        case "review":
-        case "reviewed":
-            return 2;
-
-        case "accepted":
-        case "rejected":
-            return 3;
-
-        default:
-            return 1;
-    }
-};
-
-// const viewResume = (filename) => {
-
-//     const token = localStorage.getItem("token");
-
-//     window.open(
-//         `https://hire-craft.onrender.com/api/jobs/download-resume/${filename}?token=${token}`,
-//         "_blank"
-//     );
-// };
+    const getTimelineStep = (statusStr) => {
+        const status = String(statusStr || '').toLowerCase().trim();
+        if (status === 'accepted' || status === 'rejected' || status === 'decision') return 3;
+        if (status === 'reviewed' || status === 'review') return 2;
+        return 1;
+    };
 
     return (
         <div className={`candidate-page ${theme === "light" ? "light-mode" : ""}`}>
@@ -778,7 +560,6 @@ const getTimelineStep = (status) => {
                     <h1>Welcome, {user?.name || "Candidate"}</h1>
                     <p>Find jobs, compare AI scores, and track applications.</p>
                 </div>
-
                 <div className="candidate-actions">
                     <button className="ghost-btn" onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
                         {theme === "dark" ? "Light Mode" : "Dark Mode"}
@@ -787,131 +568,36 @@ const getTimelineStep = (status) => {
                 </div>
             </header>
 
-<section className="candidate-stats">
-
-    <button
-        className={
-            activeTab === "applications"
-                ? "stat-filter active"
-                : "stat-filter"
-        }
-        onClick={() => {
-            setActiveTab(
-                activeTab === "applications"
-                    ? "all"
-                    : "applications"
-            );
-
-            // setVisibleCount(8);
-        }}
-    >
-        <strong>{appliedJobs.length}</strong>
-        <span>Applications</span>
-    </button>
-
-    <button
-        className={
-            activeTab === "saved"
-                ? "stat-filter active"
-                : "stat-filter"
-        }
-        onClick={() => {
-            setActiveTab(
-                activeTab === "saved"
-                    ? "all"
-                    : "saved"
-            );
-
-            // setVisibleCount(8);
-        }}
-    >
-        <strong>{savedJobs.length}</strong>
-        <span>Saved Jobs</span>
-    </button>
-
-    <button
-        className={
-            activeTab === "pending"
-                ? "stat-filter active"
-                : "stat-filter"
-        }
-        onClick={() => {
-            setActiveTab(
-                activeTab === "pending"
-                    ? "all"
-                    : "pending"
-            );
-
-            // setVisibleCount(8);
-        }}
-    >
-        <strong>{pendingJobs.length}</strong>
-        <span>Pending</span>
-    </button>
-
-    <button
-        className={
-            activeTab === "accepted"
-                ? "stat-filter active accepted-filter"
-                : "stat-filter"
-        }
-        onClick={() => {
-            setActiveTab(
-                activeTab === "accepted"
-                    ? "all"
-                    : "accepted"
-            );
-
-            // setVisibleCount(8);
-        }}
-    >
-        <strong>{acceptedJobs.length}</strong>
-        <span>Accepted</span>
-    </button>
-
-    <button
-        className={
-            activeTab === "rejected"
-                ? "stat-filter active rejected-filter"
-                : "stat-filter"
-        }
-        onClick={() => {
-            setActiveTab(
-                activeTab === "rejected"
-                    ? "all"
-                    : "rejected"
-            );
-
-            // setVisibleCount(8);
-        }}
-    >
-        <strong>{rejectedJobs.length}</strong>
-        <span>Rejected</span>
-    </button>
-
-    <div>
-        <strong>{averageMatch}%</strong>
-        <span>Avg Match</span>
-    </div>
-
-<div className="profile-completion-card">
-
-    <strong>{profileCompletion}%</strong>
-
-    <span>Profile Completion</span>
-
-    {/* <div className="profile-progress-bar">
-        <div
-            className="profile-progress-fill"
-            style={{
-                width: `${profileCompletion}%`
-            }}
-        />
-    </div> */}
-
-</div>
-
-</section>
+            <section className="candidate-stats">
+                <button className={`stat-filter ${activeTab === "applications" ? "active" : ""}`} onClick={() => setActiveTab(activeTab === "applications" ? "all" : "applications")}>
+                    <strong>{appliedJobs.length}</strong>
+                    <span>Applications</span>
+                </button>
+                <button className={`stat-filter ${activeTab === "saved" ? "active" : ""}`} onClick={() => setActiveTab(activeTab === "saved" ? "all" : "saved")}>
+                    <strong>{savedJobs.length}</strong>
+                    <span>Saved Jobs</span>
+                </button>
+                <button className={`stat-filter ${activeTab === "pending" ? "active" : ""}`} onClick={() => setActiveTab(activeTab === "pending" ? "all" : "pending")}>
+                    <strong>{pendingJobs.length}</strong>
+                    <span>Pending</span>
+                </button>
+                <button className={`stat-filter ${activeTab === "accepted" ? "active" : ""}`} onClick={() => setActiveTab(activeTab === "accepted" ? "all" : "accepted")}>
+                    <strong>{acceptedJobs.length}</strong>
+                    <span>Accepted</span>
+                </button>
+                <button className={`stat-filter ${activeTab === "rejected" ? "active" : ""}`} onClick={() => setActiveTab(activeTab === "rejected" ? "all" : "rejected")}>
+                    <strong>{rejectedJobs.length}</strong>
+                    <span>Rejected</span>
+                </button>
+                <div className="stat-filter-static">
+                    <strong>{averageMatch}%</strong>
+                    <span>Avg Match</span>
+                </div>
+                <div className="stat-filter-static">
+                    <strong>{profileCompletion}%</strong>
+                    <span>Profile</span>
+                </div>
+            </section>
 
             <section className="candidate-panel">
                 <div className="search-row">
@@ -940,27 +626,15 @@ const getTimelineStep = (status) => {
                 )}
 
                 {savedSearches.length > 0 && (
-
-                <div className="recent-searches">
-
-                    <span>Saved Searches:</span>
-
-                    {savedSearches.map((item) => (
-
-                        <button
-                            key={item}
-                            onClick={() => {
-                                setSearchQuery(item);
-                                runSearch(item);
-                            }}
-                        >
-                            {item}
-                        </button>
-
-                    ))}
-
-                </div>
-            )}
+                    <div className="recent-searches">
+                        <span>Saved Searches:</span>
+                        {savedSearches.map((item) => (
+                            <button key={item} onClick={() => { setSearchQuery(item); runSearch(item); }}>
+                                {item}
+                            </button>
+                        ))}
+                    </div>
+                )}
 
                 <div className="chips-marquee">
                     <div className="chips-track smooth-scroll">
@@ -970,7 +644,7 @@ const getTimelineStep = (status) => {
                                 className={selectedChips.includes(chip) ? "moving-chip selected" : "moving-chip"}
                                 onClick={() => handleChipSelect(chip)}
                             >
-                                {chip}{selectedChips.includes(chip) ? " selected" : ""}
+                                {chip}
                             </button>
                         ))}
                     </div>
@@ -991,408 +665,227 @@ const getTimelineStep = (status) => {
             </section>
 
             <section className="resume-panel">
-    <div>
-        <h2>Upload Resume for AI Matching</h2>
+                <div>
+                    <h2>Upload Resume for AI Matching</h2>
+                    <p>PDF resumes are matched against required skills and ranked by score.</p>
+                </div>
+                <div className="resume-upload-wrapper">
+                    <label className="custom-file-upload" htmlFor="hidden-file-input">
+                        Choose Resume PDF
+                    </label>
+                    <input
+                        id="hidden-file-input"
+                        name="resume"
+                        className="hidden-file-input"
+                        type="file"
+                        accept=".pdf"
+                        onChange={(e) => setResume(e.target.files?.[0] || null)}
+                    />
+                    <span className="selected-file-name">{resume ? resume.name : "No file selected"}</span>
+                    <button type="button" className="success-btn" disabled={loading} onClick={handleResumeUpload}>
+                        {loading ? "Analyzing..." : "Upload & Match"}
+                    </button>
+                </div>
+            </section>
 
-        <p>
-            PDF resumes are matched against required skills
-            and ranked by score.
-        </p>
-    </div>
-
-    <div className="resume-upload-wrapper">
-
-        <label
-            className="custom-file-upload"
-            htmlFor="hidden-file-input"
-        >
-            Choose Resume PDF
-        </label>
-
-        <input
-            id="hidden-file-input"
-            name="resume"
-            className="hidden-file-input"
-            type="file"
-            accept=".pdf"
-            onChange={(e) => {
-                console.log("FILE CHANGED");
-
-                const file = e.target.files?.[0];
-
-                console.log(file);
-
-                setResume(file || null);
-            }}
-        />
-
-        <span className="selected-file-name">
-            {resume
-                ? resume.name
-                : "No file selected"}
-        </span>
-
-        <button
-            type="button"
-            className="success-btn"
-            disabled={loading}
-            onClick={() => {
-                // console.log("UPLOAD BUTTON CLICKED");
-                handleResumeUpload();
-            }}
-        >
-            {loading
-                ? "Analyzing..."
-                : "Upload & Match"}
-        </button>
-
-    </div>
-</section>
-
-<section className="resume-history-panel">
-
-    <div className="section-title-row">
-        <h2>Resume History</h2>
-
-        <span>
-            {resumeHistory.length} uploads
-        </span>
-    </div>
-
-    {resumeHistory.length === 0 ? (
-
-        <p className="empty-state">
-            No resumes uploaded yet.
-        </p>
-
-    ) : (
-
-        <>
-            <div className="resume-history-list">
-
-                {paginatedResumeHistory.map(
-                    (resumeItem, index) => {
-                    return (
-
-                        <div
-                            key={index}
-                            className="resume-history-card"
-                        >
-
-                            <div>
-                                <strong>
-                                    {resumeItem.fileName}
-                                </strong>
-
-                                <p>
-                                    Uploaded on{" "}
-                                    {resumeItem.uploadedAt
-                                        ? new Date(
-                                            resumeItem.uploadedAt
-                                        ).toLocaleString()
-                                        : "Recently uploaded"}
-                                </p>
-                            </div>
-
-{resumeItem?.filePath ? (
-
-    <div
-        style={{
-            display: "flex",
-            gap: "10px",
-            marginTop: "10px"
-        }}
-    >
-
-<button
-    className="primary-btn"
-    onClick={() => {
-
-        const resumeUrl = getResumeUrl(
-            resumeItem.filePath
-        );
-
-        // console.log("OPENING:", resumeUrl);
-
-        window.open(
-            `${resumeUrl}#toolbar=1&navpanes=0&scrollbar=1`,
-            "_blank"
-        );
-    }}
-    style={{
-        background: "#1e293b",
-        color: "white",
-        border: "1px solid #334155",
-        padding: "6px 12px",
-        borderRadius: "6px",
-        cursor: "pointer"
-    }}
->
-    View Resume
-</button>
-
-<button
-    onClick={() => {
-
-        const resumeUrl = getResumeUrl(
-            resumeItem.filePath
-        );
-
-        window.open(resumeUrl, "_blank");
-
-    }}
-    style={{
-        background: "#4caf5022",
-        color: "#4caf50",
-        border: "1px solid #4caf50",
-        padding: "6px 12px",
-        borderRadius: "6px",
-        cursor: "pointer"
-    }}
->
-    Download Resume
-</button>
-<button
-    className="delete-resume-btn"
-    onClick={() => handleDeleteResume(resumeItem)}
->
-    Delete Resume
-</button>
-
-    </div>
-
-) : (
-
-    <span style={{ color: "#888" }}>
-        No Resume
-    </span>
-
-)}
+            <section className="resume-history-panel">
+                {resumeHistory.length === 0 ? (
+                    <div className="empty-state">No resumes uploaded yet.</div>
+                ) : (
+                    <>
+                        <div className="resume-history-list">
+                            {paginatedResumeHistory.map((resumeItem, index) => (
+                                <div key={resumeItem._id || index} className="resume-history-card">
+                                    <div>
+                                        <strong>{resumeItem.fileName}</strong>
+                                        <p>Uploaded on {resumeItem.uploadedAt ? new Date(resumeItem.uploadedAt).toLocaleString() : "Recently uploaded"}</p>
+                                    </div>
+                                    {resumeItem?.filePath ? (
+                                        <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
+                                            <button
+                                                className="primary-btn"
+                                                onClick={() => window.open(`${getResumeUrl(resumeItem.filePath)}#toolbar=1&navpanes=0&scrollbar=1`, "_blank")}
+                                                style={{ background: "#1e293b", color: "white", border: "1px solid #334155", padding: "6px 12px", borderRadius: "6px", cursor: "pointer" }}
+                                            >
+                                                View Resume
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    const link = document.createElement("a");
+                                                    link.href = getResumeUrl(resumeItem.filePath);
+                                                    link.download = resumeItem.fileName;
+                                                    document.body.appendChild(link);
+                                                    link.click();
+                                                    document.body.removeChild(link);
+                                                }}
+                                                style={{ background: "#4caf5022", color: "#4caf50", border: "1px solid #4caf50", padding: "6px 12px", borderRadius: "6px", cursor: "pointer" }}
+                                            >
+                                                Download Resume
+                                            </button>
+                                            <button className="delete-resume-btn" onClick={() => handleDeleteResume(resumeItem)}>
+                                                Delete Resume
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <span style={{ color: "#888" }}>No Resume</span>
+                                    )}
+                                </div>
+                            ))}
                         </div>
-                    );
-                })}
-            </div>
 
-            <div className="pagination-controls">
-
-                <button
-                    disabled={resumeCurrentPage === 1}
-                    onClick={() =>
-                        setResumeCurrentPage(prev => prev - 1)
-                    }
-                >
-                    ← Previous
-                </button>
-
-                <span>
-                    Page {resumeCurrentPage} of{" "}
-                    {totalResumePages || 1}
-                </span>
-
-                <button
-                    disabled={
-                        resumeCurrentPage >= totalResumePages
-                    }
-                    onClick={() =>
-                        setResumeCurrentPage(prev => prev + 1)
-                    }
-                >
-                    Next →
-                </button>
-
-            </div>
-        </>
-    )}
-</section>
+                        <div className="pagination-controls">
+                            <button disabled={resumeCurrentPage === 1} onClick={() => setResumeCurrentPage(prev => prev - 1)}>
+                                ← Previous
+                            </button>
+                            <span>Page {resumeCurrentPage} of {totalResumePages || 1}</span>
+                            <button disabled={resumeCurrentPage >= totalResumePages} onClick={() => setResumeCurrentPage(prev => prev + 1)}>
+                                Next →
+                            </button>
+                        </div>
+                    </>
+                )}
+            </section>
 
             <section>
                 <div className="section-title-row">
                     <h2>
-    {
-        activeTab === "saved"
-            ? "Saved Jobs"
-            : activeTab === "applications"
-            ? "My Applications"
-            : activeTab === "accepted"
-            ? "Accepted Jobs"
-            : activeTab === "pending"
-            ? "Pending Jobs"
-            : activeTab === "rejected"
-            ? "Rejected Jobs"
-            : "Available Jobs"
-    }
-</h2>
+                        {activeTab === "saved" ? "Saved Jobs"
+                        : activeTab === "applications" ? "My Applications"
+                        : activeTab === "accepted" ? "Accepted Jobs"
+                        : activeTab === "pending" ? "Pending Jobs"
+                        : activeTab === "rejected" ? "Rejected Jobs"
+                        : "Available Jobs"}
+                    </h2>
                     <div className="title-actions">
                         {hasMatchedResults && (
-                            <button className="ghost-btn compact" onClick={() => {setJobs(allJobs); setHasMatchedResults(false);}}>
+                            <button className="ghost-btn compact" onClick={() => { setJobs(allJobs); setHasMatchedResults(false); }}>
                                 View all jobs
                             </button>
                         )}
                         <span>{filteredJobs.length} results</span>
-                        
                     </div>
                 </div>
+
+<div style={{color:"red"}}>
+
+<p>activeTab : {activeTab}</p>
+
+<p>allJobs : {allJobs.length}</p>
+
+<p>jobs : {jobs.length}</p>
+
+<p>filteredJobs : {filteredJobs.length}</p>
+
+<p>applications : {applications.length}</p>
+
+<p>selectedChips : {selectedChips.length}</p>
+
+<p>searchQuery : {searchQuery}</p>
+
+<p>hasMatchedResults : {String(hasMatchedResults)}</p>
+
+</div>
 
                 {jobsLoading ? (
                     <div className="results-grid">
                         {[1, 2, 3, 4].map((item) => <div className="job-skeleton" key={item} />)}
                     </div>
                 ) : filteredJobs.length === 0 ? (
-                    <p className="empty-state">
-    {
-        activeTab === "saved"
-            ? "No saved jobs yet."
-            : activeTab === "applications"
-            ? "You haven't applied to any jobs yet."
-            : "No jobs found."
-    }
-</p>
+                    <div className="empty-state">
+                        {activeTab === "saved" ? "No saved jobs yet."
+                        : activeTab === "applications" ? "You haven't applied to any jobs yet."
+                        : "No jobs found."}
+                    </div>
                 ) : (
                     <>
-    <div className="results-grid">
+                        <div className="results-grid">
+                            {visibleJobs.map((job, index) => {
+                                const currentStatus = String(job.applicationStatus || '').toLowerCase().trim();
+                                const currentStep = getTimelineStep(currentStatus);
 
-        {visibleJobs.map((job) => (
+                                return (
+                                    <div key={job._id || index} className="job-wrapper" style={{ marginTop: '20px', display: 'block' }}>
+                                        <JobCard
+                                            job={job}
+                                            onApply={() => handleApply(job._id, job.matchScore || 0, job.candidateSkills || [])}
+                                            isSaved={savedJobs.includes(job._id)}
+                                            onToggleSave={toggleSavedJob}
+                                            applicationStatus={currentStatus} 
+                                        />
 
-<div
-    key={job._id}
-    className="job-wrapper"
->
+                                        {job.applied && (
+                                            <div className="application-status-container" style={{ padding: '20px', background: 'rgba(255,255,255,0.02)', borderRadius: '16px', marginTop: '-15px', border: '1px solid rgba(255,255,255,0.05)', borderTop: 'none', borderTopLeftRadius: '0', borderTopRightRadius: '0' }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                        <span style={{ fontSize: '0.8rem', color: '#888', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Tracking Status:</span>
+                                                        <div className={`status-badge ${getStatusClass(currentStatus)}`}>
+                                                            {currentStatus === 'reviewed' ? 'Under Review' : currentStatus || 'Applied'}
+                                                        </div>
+                                                    </div>
 
-    <JobCard
-        job={job}
-        onApply={handleApply}
-        isSaved={savedJobs.includes(job._id)}
-        onToggleSave={toggleSavedJob}
-        applicationStatus={job.applicationStatus}
-    />
+                                                    <div className="application-timeline" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                        <div className="timeline-item" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                            <div className="timeline-dot completed" style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#646cff', boxShadow: '0 0 8px #646cff' }} />
+                                                            <span style={{ fontSize: '0.8rem', color: '#fff', fontWeight: '600' }}>Applied</span>
+                                                        </div>
 
-    {job.applied && (
+                                                        <div className="timeline-line" style={{ width: '30px', height: '2px', background: currentStep >= 2 ? '#646cff' : 'rgba(255,255,255,0.1)' }} />
 
-        <div className="application-status-container">
+                                                        <div className="timeline-item" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                            <div className={`timeline-dot ${currentStep >= 2 ? 'completed' : ''}`} style={{ width: '10px', height: '10px', borderRadius: '50%', background: currentStep >= 2 ? '#fffc64' : 'rgba(255,255,255,0.2)', boxShadow: currentStep >= 2 ? '0 0 8px #e3ff64' : 'none' }} />
+                                                            <span style={{ fontSize: '0.8rem', color: currentStep >= 2 ? '#fff' : '#666', fontWeight: '500' }}>Review</span>
+                                                        </div>
 
-            {/* STATUS BADGE */}
-            <div
-                className={`status-badge ${getStatusClass(
-                    job.applicationStatus
-                )}`}
-            >
-                {job.applicationStatus || "Pending"}
-            </div>
+                                                        <div className="timeline-line" style={{ width: '30px', height: '2px', background: currentStep >= 3 ? (currentStatus === 'accepted' ? '#22c55e' : currentStatus === 'rejected' ? '#ef4444' : '#646cff') : 'rgba(255,255,255,0.1)' }} />
 
-            {/* TIMELINE */}
-            <div className="application-timeline">
+                                                        <div className="timeline-item" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                            <div 
+                                                                className={`timeline-dot ${currentStep >= 3 ? currentStatus : ''}`} 
+                                                                style={{ 
+                                                                    width: '10px', height: '10px', borderRadius: '50%', 
+                                                                    background: currentStep >= 3 ? (currentStatus === 'accepted' ? '#22c55e' : '#ef4444') : 'rgba(255,255,255,0.2)',
+                                                                    boxShadow: currentStep >= 3 ? `0 0 8px ${currentStatus === 'accepted' ? '#22c55e' : '#ef4444'}` : 'none'
+                                                                }} 
+                                                            />
+                                                            <span style={{ fontSize: '0.8rem', color: currentStep >= 3 ? (currentStatus === 'accepted' ? '#22c55e' : '#ef4444') : '#666', fontWeight: '700', textTransform: 'capitalize' }}>
+                                                                {currentStatus === 'accepted' ? 'Accepted' : currentStatus === 'rejected' ? 'Rejected' : 'Decision'}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
 
-                {/* APPLIED */}
-                <div className="timeline-item">
-
-                    <div
-                        className={`timeline-dot completed`}
-                    />
-
-                    <span>
-                        Applied
-                    </span>
-
-                </div>
-
-                {/* REVIEW */}
-                <div className="timeline-line" />
-
-                <div className="timeline-item">
-
-                    <div
-                        className={`timeline-dot ${
-                            getTimelineStep(
-                                job.applicationStatus
-                            ) >= 2
-                                ? "completed"
-                                : ""
-                        }`}
-                    />
-
-                    <span>
-                        Review
-                    </span>
-
-                </div>
-
-                {/* FINAL */}
-                <div className="timeline-line" />
-
-                <div className="timeline-item">
-
-                    <div
-                        className={`timeline-dot ${
-                            getTimelineStep(
-                                job.applicationStatus
-                            ) >= 3
-                                ? job.applicationStatus === "accepted"
-                                    ? "accepted"
-                                    : "rejected"
-                                : ""
-                        }`}
-                    />
-
-                    <span>
-                        {job.applicationStatus === "accepted"
-                            ? "Accepted"
-                            : job.applicationStatus === "rejected"
-                            ? "Rejected"
-                            : "Decision"}
-                    </span>
-
-                </div>
-
-            </div>
-
-        </div>
-
-    )}
-
-</div>
-
-        ))}
-
-    </div>
-
-    <div className="pagination-controls">
-
-        <button
-            disabled={jobsPage === 1}
-            onClick={() =>
-                setJobsPage(prev => prev - 1)
-            }
-        >
-            ← Previous
-        </button>
-
-        <span>
-            Page {jobsPage} of{" "}
-            {totalJobPages || 1}
-        </span>
-
-        <button
-            disabled={jobsPage >= totalJobPages}
-            onClick={() =>
-                setJobsPage(prev => prev + 1)
-            }
-        >
-            Next →
-        </button>
-
-    </div>
-                        {/* {visibleCount < filteredJobs.length && (
-                            <button className="load-more-btn" onClick={() => setVisibleCount((count) => count + 8)}>
-                                Load more jobs
-                            </button>
-                        )} */}
+                        {filteredJobs.length > jobsPerPage && (
+                            <div className="pagination-wrapper" style={{ display: "flex", justifyContent: "center", gap: "12px", marginTop: "20px" }}>
+                                <button 
+                                    disabled={jobsPage === 1} 
+                                    onClick={() => setJobsPage(prev => Math.max(prev - 1, 1))}
+                                    className="pagination-btn"
+                                >
+                                    ← Previous
+                                </button>
+                                <span className="page-indicator">
+                                    Page {jobsPage} of {Math.ceil(filteredJobs.length / jobsPerPage)}
+                                </span>
+                                <button 
+                                    disabled={jobsPage >= Math.ceil(filteredJobs.length / jobsPerPage)} 
+                                    onClick={() => setJobsPage(prev => prev + 1)}
+                                    className="pagination-btn"
+                                >
+                                    Next →
+                                </button>
+                            </div>
+                        )}
                     </>
                 )}
             </section>
-            {toast && <div className={`toast ${toast.type}`}>{toast.message}</div>}
         </div>
-    
-);
+    );
 };
 
 export default CandidateView;

@@ -55,7 +55,6 @@ const AuthPage = () => {
             alert("Registration Successful! Please log in.");
             setIsLogin(true);
         } catch (err) {
-            console.error(err);
 
             alert(
                 err.response?.data?.error ||

@@ -10,5 +10,11 @@ body:
 
     \  \"password\": \"123456\"\r
 
-    }"
+    }\r
+
+    // \"token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhMTk4OTNkM2Q1YTRlMDQyYTdmZGY2MCIsInJvbGUiOiJyZWNydWl0ZXIiLCJpYXQiOjE3ODEwMTcxNjIsImV4cCI6MTc4MTEwMzU2Mn0.-wyu2OaEESPEmmMgVWXsCruAxIkgVLdgK6hSEzp-7nU\",\r
+
+    \    // \"user\": {\r
+
+    \    //     \"id\": \"6a19893d3d5a4e042a7fdf60\","
 order: 238471456989630

@@ -90,3 +90,225 @@
     border: 1px solid #4caf50;
     cursor: not-allowed;
     }
+    /* === ENHANCED JOB CARD STYLING === */
+.job-card {
+    background: rgba(30, 30, 38, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 20px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    backdrop-filter: blur(10px);
+}
+
+.job-card:hover {
+    border-color: rgba(99, 102, 241, 0.3);
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px rgba(99, 102, 241, 0.1);
+}
+
+.job-card-top {
+    display: flex;
+    justify-content: space-between;
+    gap: 20px;
+}
+
+.job-title-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+.job-title-row h3 {
+    margin: 0;
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: white;
+}
+
+.job-mode-badge {
+    background: rgba(99, 102, 241, 0.15);
+    color: #818cf8;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.muted-text {
+    color: #94a3b8;
+    font-size: 0.9rem;
+    margin: 6px 0;
+}
+
+.salary-text {
+    color: #10b981;
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+.match-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-end;
+    min-width: 120px;
+}
+
+.save-job-btn {
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #cbd5e1;
+    width: 80px;
+    height: 30px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    font-size: 1.2rem;
+    padding: 15px;
+}
+
+.save-job-btn:hover {
+    border-color: rgba(255, 193, 7, 0.5);
+    color: #ffc107;
+}
+
+.save-job-btn.saved {
+    background: rgba(255, 193, 7, 0.1);
+    border-color: #ffc107;
+    color: #ffc107;
+}
+
+/* Enhanced Match Circle */
+.match-circle {
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 900;
+    font-size: 1.4rem;
+    border: 3px solid;
+}
+
+.match-circle.high {
+    background: rgba(16, 185, 129, 0.1);
+    color: #10b981;
+    border-color: #10b981;
+}
+
+.match-circle.medium {
+    background: rgba(245, 158, 11, 0.1);
+    color: #f59e0b;
+    border-color: #f59e0b;
+}
+
+.match-circle.low {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+    border-color: #ef4444;
+}
+
+/* Quick Apply Button */
+.quick-apply-btn {
+    padding: 12px 20px;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.quick-apply-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px rgba(99, 102, 241, 0.3);
+}
+
+/* Status Button */
+.status-btn {
+    padding: 12px 20px;
+    background: rgba(100, 108, 255, 0.1);
+    color: #6366f1;
+    border: 1px solid #6366f1;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: not-allowed;
+}
+
+.status-btn.pending {
+    background: rgba(245, 158, 11, 0.1);
+    color: #f59e0b;
+    border-color: #f59e0b;
+}
+
+.status-btn.accepted {
+    background: rgba(16, 185, 129, 0.1);
+    color: #10b981;
+    border-color: #10b981;
+}
+
+.status-btn.rejected {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+    border-color: #ef4444;
+}
+
+/* Skills Display */
+.skill-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.skill-badge {
+    background: rgba(99, 102, 241, 0.1);
+    color: #818cf8;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.skill-badge.matched {
+    background: rgba(16, 185, 129, 0.1);
+    color: #10b981;
+}
+
+.skill-badge.missing {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+    text-decoration: line-through;
+}
+
+    /* --- STABLE DYNAMIC STATUS BADGES --- */
+.ranking-status.pending, 
+.ranking-status.applied,
+.ranking-status.review {
+    background: rgba(245, 158, 11, 0.12) !important;
+    color: #f59e0b !important;
+    border: 1px solid rgba(245, 158, 11, 0.25);
+}
+
+.ranking-status.accepted,
+.ranking-status.decision {
+    background: rgba(34, 197, 94, 0.12) !important;
+    color: #22c55e !important;
+    border: 1px solid rgba(34, 197, 94, 0.25);
+}
+
+.ranking-status.rejected {
+    background: rgba(239, 68, 68, 0.12) !important;
+    color: #ef4444 !important;
+    border: 1px solid rgba(239, 68, 68, 0.25);
+}

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import API from '../api';
+import { getResumeUrl } from '../utils/getResumeUrl';
 
 const ApplicantsList = () => {
     const [applicants, setApplicants] = useState([]);
@@ -9,6 +10,8 @@ const ApplicantsList = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const applicantsPerPage = 8;
     const navigate = useNavigate();
+
+
 
     const notify = (message, type = "success") => {
         setToast({ message, type });
@@ -31,14 +34,12 @@ const ApplicantsList = () => {
 useEffect(() => {
 
     fetchApplicants().catch((err) => {
-        console.error("Fetch applicants failed:", err);
     });
 
     // AUTO REFRESH
     const interval = setInterval(() => {
 
         fetchApplicants().catch((err) => {
-            console.error("Auto refresh failed:", err);
         });
 
     }, 15000);
@@ -49,9 +50,14 @@ useEffect(() => {
 
 const handleStatusUpdate = async (applicationId, newStatus) => {
     try {
+        const token = localStorage.getItem("token");
         await API
         .patch(`/api/jobs/applicants/${applicationId}`, {
-            status: newStatus.toLowerCase()
+            status: String(newStatus).toLowerCase()
+        }, {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
         });
         
         setApplicants(prev => prev.map(app => 
@@ -62,7 +68,6 @@ const handleStatusUpdate = async (applicationId, newStatus) => {
 
         await fetchApplicants();
     } catch (err) {
-        console.error("Status update failed:", err);
         notify("Failed to update status.", "error");
     }
 };
@@ -143,6 +148,8 @@ const paginatedApplicants =
                 <th style={{ width: "22%" }}>Target Role Position</th>
                 <th style={{ width: "10%" }}>AI Match</th>
                 <th style={{ width: "12%" }}>Status Routing</th>
+                <th style={{ width: "12%" }}>Resume</th>
+                <th style={{ width: "18%" }}>Action Center</th>
                 <th style={{ width: "28%" }}>Inference Recommendation Explanation</th>
             </tr>
         </thead>
@@ -181,17 +188,77 @@ const paginatedApplicants =
                             </div>
                         </td>
                         <td>
-                            <span className={`ranking-status ${String(app.status).toLowerCase()}`}>
-                                {app.status}
-                            </span>
-                        </td>
+    <span className={`ranking-status ${String(app.status).toLowerCase()}`}>
+        {app.status}
+    </span>
+</td>
+
+<td>
+{
+    app.candidateId?.resume ? (
+        <button
+            onClick={() => {
+                const resume = typeof app.candidateId.resume === "object"
+                    ? app.candidateId.resume.filePath
+                    : app.candidateId.resume;
+
+                window.open(
+                    getResumeUrl(resume),
+                    "_blank"
+                );
+            }}
+        >
+            View Resume
+        </button>
+    ) : (
+        <span>No Resume</span>
+    )
+}
+</td>
+
+<td>
+    <div className="action-buttons">
+        <button
+            className="approve-btn"
+            onClick={() =>
+                handleStatusUpdate(
+                    app._id,
+                    "accepted"
+                )
+            }
+        >
+            ✓ Approve
+        </button>
+
+        <button
+            className="reject-btn"
+            onClick={() =>
+                handleStatusUpdate(
+                    app._id,
+                    "rejected"
+                )
+            }
+        >
+            ✕ Reject
+        </button>
+    </div>
+</td>
                         <td>
                             <div className="ai-inference-container">
                                 <span className="ai-pill-tag" style={{ background: app.recommendationColor || "rgba(99, 102, 241, 0.15)", color: "#818cf8" }}>
-                                    {app.aiRecommendation || "Pending Allocation"}
+                                    {app.matchScore >= 80
+                                    ? "Highly Recommended"
+                                    : app.matchScore >= 60
+                                    ? "Recommended"
+                                    : app.matchScore > 0
+                                    ? "Consider"
+                                    : "No AI Data"}
                                 </span>
                                 <small className="ai-insight-text-block">
-                                    {app.aiInsight || "Analyzing portfolio parameters..."}
+                                    {app.candidateSkills?.length > 0
+        ? `Matched Skills: ${app.candidateSkills.join(", ")}`
+        : "Resume matching data unavailable"
+                                    }
                                 </small>
                             </div>
                         </td>

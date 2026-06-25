@@ -1,20 +1,42 @@
 $kind: http-request
 name: New Request
-url: http://localhost:5000/api/login
-method: POST
+url: http://localhost:5000/api/jobs/my-application
+method: GET
 body:
   type: json
   content: "{\r
 
-    \    \"email\":\"recruiter@gmail.com\",\r
+    \    // \"email\":\"recruiter@gmail.com\",\r
+
+    \    // \"password\":\"123456\"\r
+
+    \    // \"title\":\"Senior MERN Developer\",\r
+
+    //   \"location\":\"Remote\"\r
+
+    \"email\":\"candidate@gmail.com\",\r
 
     \    \"password\":\"123456\"\r
 
-    \    \r
+    \    // \"name\":\"Updated Candidate\"\r
 
-    }"
+    }\r
+
+    // \"token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhMTljYTI1NmY0NGY2MzA3YjZmYzBhNyIsInJvbGUiOiJjYW5kaWRhdGUiLCJpYXQiOjE3ODEwMDk3MjQsImV4cCI6MTc4MTA5NjEyNH0.63lnUK_p5XHPrUohCGqbvApfMvxg7_lJvbr6mG_ulYk\",\r
+
+    //     \"user\": {\r
+
+    //         \"id\": \"6a19ca256f44f6307b6fc0a7\",\r
+
+    //         \"name\": \"Candidate One\",\r
+
+    //         \"email\": \"candidate@gmail.com\",\r
+
+    //         \"role\": \"candidate\"\r
+
+    //     }"
 auth:
   type: bearer
   credentials:
-    token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhMTljYTI1NmY0NGY2MzA3YjZmYzBhNyIsInJvbGUiOiJjYW5kaWRhdGUiLCJpYXQiOjE3ODAwNzU3NzAsImV4cCI6MTc4MDE2MjE3MH0.49T9WJiAcwUGfkDXUUlD4T_KBk76_2-cQakBrWAtXDE
+    token: "{{RecentCToken}}"
 order: 4174640723800628

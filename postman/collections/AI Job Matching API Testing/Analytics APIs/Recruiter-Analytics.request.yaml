@@ -1,0 +1,9 @@
+$kind: http-request
+name: 'Recruiter Analytics'
+url: 'http://localhost:5000/api/jobs/analytics'
+method: GET
+auth:
+  type: bearer
+  credentials:
+    token: '{{recruiterToken}}'
+order: 1780860500008

@@ -1,0 +1,16 @@
+$kind: http-request
+name: New Request
+url: http://localhost:5000/api/auth/update/6a19ca256f44f6307b6fc0a7
+method: PUT
+body:
+  type: json
+  content: "{\r
+
+    \    \"name\":\"Updated Recruiter Name\"\r
+
+    }"
+auth:
+  type: bearer
+  credentials:
+    token: "{{RecentCToken}}"
+order: 4461434834506022

@@ -1,5 +1,3 @@
-
-
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -108,8 +106,6 @@ export const deleteResume = async (req, res) => {
         });
 
     } catch (err) {
-
-        console.error("Delete Resume Error:", err);
 
         return res.status(500).json({
             error: "Failed to delete resume"
