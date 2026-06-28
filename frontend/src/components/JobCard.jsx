@@ -71,7 +71,7 @@ const JobCard = ({
 
             <div className="job-card-top">
 
-                <div>
+                <div className="job-main-content">
                     <div className="job-title-row">
                         <h3>{job.title}</h3>
 
@@ -81,11 +81,11 @@ const JobCard = ({
                     </div>
 
                     <p className="muted-text">
-                        Location: {job.location}
+                        📍: {job.location}
                     </p>
 
                     <p className="salary-text">
-                        Salary: {job.salary || "Negotiable"}
+                        💰: {job.salary || "Negotiable"}
                     </p>
                 </div>
 
@@ -110,27 +110,38 @@ const JobCard = ({
                         </button>
                     )}
 
-                    <div
-                        className="match-circle"
-                        style={{
-                            borderColor: getScoreColor(matchScore)
-                        }}
-                    >
-                        {matchScore}%
-                    </div>
+                    <div className="match-score-box">
 
-                    <span className="match-label">
-                        Match
-                    </span>
-                        <span className="ats-score-text">
-                    {matchScore >= 80
-                        ? "Strong Match"
-                        : matchScore >= 60
-                        ? "Good Match"
-                        : matchScore >= 40
-                        ? "Average Match"
-                        : "Low Match"}
-                        </span>
+<div
+className="match-circle"
+style={{
+borderColor:getScoreColor(matchScore)
+}}
+>
+{matchScore}%
+</div>
+
+<div className="match-text">
+
+<span className="match-label">
+Match
+</span>
+
+<span className="ats-score-text">
+
+{matchScore>=80
+? "Strong Match"
+:matchScore>=60
+? "Good Match"
+:matchScore>=40
+? "Average Match"
+:"Low Match"}
+
+</span>
+
+</div>
+
+</div>
 
                     {job.confidence && (
                         <span className="confidence-pill">
@@ -143,6 +154,7 @@ const JobCard = ({
             {/* AI EXPLANATION SECTION */}
 
 {job.matchScore > 0 && (
+    <section className="analysis-wrapper">
 
 <div className="ai-explanation-box">
 
@@ -260,6 +272,7 @@ const JobCard = ({
     </div>
 
 </div>
+</section>
 
 )}
 
@@ -267,7 +280,7 @@ const JobCard = ({
             {(job.matchedSkills?.length > 0 ||
                 job.missingSkills?.length > 0) && (
 
-                <div className="ai-analysis-panel">
+                <div className="ai-analysis-panel fixed-panel">
 
                     <div className="analysis-header">
 
@@ -328,7 +341,7 @@ const JobCard = ({
                 <div className="summary-header">
                     AI Recommendation
                 </div>
-                <p>
+                <p className="full-description" title={job.description}>
                     {job.aiSummary}
                 </p>
             </div>
@@ -369,7 +382,7 @@ const JobCard = ({
             {isExpanded && (
                 <div className="details-panel">
 
-                    <p>
+                    <p className="job-description">
                         {job.description ||
                             "No description provided for this position."}
                     </p>

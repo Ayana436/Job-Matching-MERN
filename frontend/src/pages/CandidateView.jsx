@@ -766,26 +766,6 @@ const CandidateView = () => {
                     </div>
                 </div>
 
-<div style={{color:"red"}}>
-
-<p>activeTab : {activeTab}</p>
-
-<p>allJobs : {allJobs.length}</p>
-
-<p>jobs : {jobs.length}</p>
-
-<p>filteredJobs : {filteredJobs.length}</p>
-
-<p>applications : {applications.length}</p>
-
-<p>selectedChips : {selectedChips.length}</p>
-
-<p>searchQuery : {searchQuery}</p>
-
-<p>hasMatchedResults : {String(hasMatchedResults)}</p>
-
-</div>
-
                 {jobsLoading ? (
                     <div className="results-grid">
                         {[1, 2, 3, 4].map((item) => <div className="job-skeleton" key={item} />)}

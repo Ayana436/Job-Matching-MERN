@@ -635,10 +635,10 @@ router.patch(
             }
 
             const candidate =
-                updatedApplication.candidateId;
+                updatedApplication?.candidateId;
 
             const job =
-                updatedApplication.jobId;
+                updatedApplication?.jobId;
 
             let emailSubject = "";
             let emailHtml = "";
@@ -703,6 +703,9 @@ router.patch(
 
             // SEND EMAIL
             if (candidate?.email && emailSubject) {
+                
+console.log("Candidate Object:", candidate);
+console.log("Email being sent to:", candidate.email);
 
                 await sendEmail({
                     to: candidate.email,
@@ -711,12 +714,22 @@ router.patch(
                 });
             }
 
+            // NO longer exists check (in case of deletion during processing)
+            if (!candidate || !job) {
+    return res.status(404).json({
+        error: "Candidate or Job no longer exists."
+    });
+}
+
             res.status(200).json(
                 updatedApplication
             );
 
         } catch (err) {
 
+            console.error("PATCH ERROR");
+            console.error(err);
+            console.error(err.stack);
             res.status(500).json({
                 error:
                     "Server failed to update status"
