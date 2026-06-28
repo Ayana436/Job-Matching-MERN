@@ -199,6 +199,7 @@ const paginatedApplicants =
 {
     app.candidateId?.resume ? (
         <button
+        className='resume-btn'
             onClick={() => {
                 const resume = typeof app.candidateId.resume === "object"
                     ? app.candidateId.resume.filePath

@@ -804,6 +804,28 @@ PREMIUM B2B SAAS GLASSMORPHISM RECRUITER MASTER INTERFACE
     font-size: 0.85rem;
 }
 
+.resume-btn{
+background:#2563eb;
+color:white;
+border:none;
+padding:10px 10px;
+border-radius:8px;
+cursor:pointer;
+transition:.25s;
+min-width:100px;
+}
+
+.resume-btn:hover{
+background:#646cff;
+color: white;
+transform:translateY(-2px);
+box-shadow:0 8px 18px rgba(37,99,235,.35);
+}
+
+.resume-btn:active{
+transform:scale(.98);
+}
+
 /* Responsive Table */
 @media (max-width: 1024px) {
     .applicants-wrapper {
