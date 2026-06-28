@@ -1,66 +1,58 @@
 import Application from "../models/Application.js";
 import Job from "../models/Job.js";
 
+// Visible Job Scope Logic
 const getVisibleJobs = (req) => {
     if (req.user.role === "admin") {
         return Job.find({});
     }
-    // For recruiters: include jobs they posted + legacy jobs without postedBy
+
     return Job.find({
         $or: [
             { postedBy: req.user.id },
-            {postedBy: null},
+            { postedBy: null },
             { postedBy: { $exists: false } }
         ]
     });
 };
 
-// APPLICANTS PER JOB
+// Applicants Per Job Logic
 export const getApplicantsPerJob = async (req, res) => {
     try {
         const jobs = await getVisibleJobs(req);
+
         const result = await Promise.all(
-            jobs.map(async (job) => {
-                const applicants = await Application.countDocuments({
+            jobs.map(async (job) => ({
+                jobTitle: job.title,
+                applicants: await Application.countDocuments({
                     jobId: job._id
-                });
-                return { jobTitle: job.title, applicants };
-            })
+                })
+            }))
         );
 
         res.json(result);
-    } catch (err) {
+    } catch {
         res.status(500).json({
             error: "Analytics fetch failed"
         });
     }
 };
 
-
-// ACCEPTANCE RATIO
+// Application Status Ratio Logic
 export const getAcceptanceRatio = async (req, res) => {
     try {
         const jobs = await getVisibleJobs(req);
         const jobIds = jobs.map(job => job._id);
-        const total = await Application.countDocuments({
-            jobId: { $in: jobIds }
-        });
-        const accepted = await Application.countDocuments({
-            jobId: { $in: jobIds },
-            status: "accepted"
-        });
-        const rejected = await Application.countDocuments({
-            jobId: { $in: jobIds },
-            status: "rejected"
-        });
-        const pending = await Application.countDocuments({
-            jobId: { $in: jobIds },
-            status: "pending"
-        });
-        const reviewed = await Application.countDocuments({
-            jobId: { $in: jobIds },
-            status: "reviewed"
-        });
+
+        const [total, accepted, rejected, pending, reviewed] =
+            await Promise.all([
+                Application.countDocuments({ jobId: { $in: jobIds } }),
+                Application.countDocuments({ jobId: { $in: jobIds }, status: "accepted" }),
+                Application.countDocuments({ jobId: { $in: jobIds }, status: "rejected" }),
+                Application.countDocuments({ jobId: { $in: jobIds }, status: "pending" }),
+                Application.countDocuments({ jobId: { $in: jobIds }, status: "reviewed" })
+            ]);
+
         res.json({
             total,
             accepted,
@@ -68,26 +60,25 @@ export const getAcceptanceRatio = async (req, res) => {
             pending,
             reviewed
         });
-    } catch (err) {
+    } catch {
         res.status(500).json({
             error: "Ratio fetch failed"
         });
     }
 };
 
-
-// TOP SKILLS DEMAND
+// Top Required Skills Logic
 export const getTopSkills = async (req, res) => {
     try {
         const jobs = await getVisibleJobs(req);
         const skillMap = {};
+
         jobs.forEach(job => {
-            const skills = job.requiredSkills || [];
-            skills.forEach(skill => {
-                skillMap[skill] =
-                    (skillMap[skill] || 0) + 1;
+            (job.requiredSkills || []).forEach(skill => {
+                skillMap[skill] = (skillMap[skill] || 0) + 1;
             });
         });
+
         const result = Object.entries(skillMap)
             .map(([skill, count]) => ({
                 skill,
@@ -97,72 +88,43 @@ export const getTopSkills = async (req, res) => {
             }))
             .sort((a, b) => b.count - a.count)
             .slice(0, 10);
+
         res.json(result);
-    } catch (err) {
+    } catch {
         res.status(500).json({
             error: "Skills analytics failed"
         });
     }
 };
 
-
-// APPLICATION TRENDS
-// export const getApplicationTrends = async (req, res) => {
-//     try {
-//         // console.log("USER:", req.user);
-
-// const jobs = await getVisibleJobs(req);
-
-
-// const jobIds = jobs.map(job => job._id);
-
-// const applications = await Application.find({
-//     jobId: { $in: jobIds }
-// });
-
-// const trends = {};
-// applications.forEach(app => {
-//     const date = new Date(app.createdAt)
-//     .toLocaleDateString();
-//     trends[date] =
-//     (trends[date] || 0) + 1;
-// });
-// const result = Object.entries(trends).map(
-//     ([date, count]) => ({
-//         date,
-//         applications: count
-//     })
-// );
-
-//         console.log("VISIBLE JOBS:", jobs.length);
-//         console.log("JOB IDS:", jobIds);
-//         console.log("APPLICATIONS:", applications.length);
-//         console.log("result:", result);
-        
-
-//         res.json(result);
-//     } catch (err) {
-// console.log(err);
-//         res.status(500).json({
-//             error: "Trend analytics failed"
-//         });
-//     }
-// };
-
+// Application Trends Logic
 export const getApplicationTrends = async (req, res) => {
-    // Inside your application trends backend controller:
-const recruiterJobs = await Job.find({ createdBy: req.user.id }).select('_id');
-const jobIds = recruiterJobs.map(job => job._id);
+    try {
+        const jobs = await getVisibleJobs(req);
+        const jobIds = jobs.map(job => job._id);
 
-const trends = await Application.aggregate([
-    { $match: { jobId: { $in: jobIds } } }, // 👈 Match apps to the recruiter's jobs!
-    {
-        $group: {
-            _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
-            count: { $sum: 1 }
-        }
-    },
-    { $sort: { "_id": 1 } }
-]);
-    res.json(trends);
-}
+        const applications = await Application.find({
+            jobId: { $in: jobIds }
+        }).select("createdAt appliedAt");
+
+        const trendMap = {};
+        applications.forEach(application => {
+            const sourceDate = application.createdAt || application.appliedAt || new Date();
+            const date = sourceDate.toISOString().slice(0, 10);
+            trendMap[date] = (trendMap[date] || 0) + 1;
+        });
+
+        res.json(
+            Object.entries(trendMap)
+                .map(([date, applications]) => ({
+                    date,
+                    applications
+                }))
+                .sort((a, b) => a.date.localeCompare(b.date))
+        );
+    } catch {
+        res.status(500).json({
+            error: "Trend analytics failed"
+        });
+    }
+};

@@ -97,7 +97,7 @@ const CandidateView = () => {
                 headers: { Authorization: `Bearer ${token}` }
             });
 
-            if (res.data && Array.isArray(res.data) && res.data.length > 0) {
+            if (res.data && Array.isArray(res.data)) {
                 setApplications(currentApps => {
                     const enrichedJobs = enrichJobsWithApplications(res.data || [], currentApps);
                     setAllJobs(enrichedJobs);
@@ -107,8 +107,8 @@ const CandidateView = () => {
                     return currentApps;
                 });
             }
-        } catch (err) {
-            console.error("Error fetching available jobs:", err.message);
+        } catch {
+            setJobs([]);
         }
     }, []); 
 
@@ -120,8 +120,8 @@ const CandidateView = () => {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setResumeHistory(res.data.history || []);
-        } catch (err) {
-            console.error("Error fetching resume history:", err.message);
+        } catch {
+            setResumeHistory([]);
         }
     }, []); 
 
@@ -140,8 +140,7 @@ const CandidateView = () => {
                 setJobs(prev => enrichJobsWithApplications(prev, res.data));
             }
             return res.data;
-        } catch (err) {
-            console.error("Error fetching applications:", err.message);
+        } catch {
             return [];
         }
     }, [userId]); 
@@ -176,8 +175,10 @@ const CandidateView = () => {
                         setJobs(enrichedJobs);
                     }
                 }
-            } catch (err) {
-                console.error("Initialization loop error:", err.response?.data?.error || err.message || err);
+            } catch {
+                if (isMounted) {
+                    setApplications([]);
+                }
             } finally {
                 if (isMounted) setJobsLoading(false);
             }
@@ -210,7 +211,7 @@ const CandidateView = () => {
             isMounted = false;
             if (intervalId) clearInterval(intervalId);
         };
-    }, [hasMatchedResults, selectedChips?.length, searchQuery, fetchApplications, fetchJobs]);
+    }, [hasMatchedResults, selectedChips, searchQuery, fetchApplications, fetchJobs]);
 
     useEffect(() => {
         localStorage.setItem("savedJobs", JSON.stringify(savedJobs));
@@ -253,7 +254,7 @@ const CandidateView = () => {
             }, timeout);
 
             return () => clearTimeout(logoutTimer);
-        } catch (err) {
+        } catch {
             localStorage.removeItem("token");
             localStorage.removeItem("user");
             navigate("/auth");
@@ -292,7 +293,7 @@ const CandidateView = () => {
             setJobsPage(1);
             setJobs(enrichJobsWithApplications(res.data, applications));
             saveRecentSearch(cleanQuery);
-        } catch (err) {
+        } catch {
             notify("Search failed.", "error");
         } finally {
             setJobsLoading(false);
@@ -326,8 +327,8 @@ const CandidateView = () => {
             const res = await API.get(`/api/jobs/search?q=${encodeURIComponent(query)}`);
             setJobs(enrichJobsWithApplications(res.data, applications));
             setJobsPage(1);
-        } catch (err) {
-            console.error(err);
+        } catch {
+            notify("Skill search failed.", "error");
         } finally {
             setJobsLoading(false);
         }
@@ -353,7 +354,7 @@ const CandidateView = () => {
 
             await fetchResumeHistory();
             notify("Resume analyzed. Best matches are ranked first.");
-        } catch (err) {
+        } catch {
             notify("Failed to upload resume.", "error");
         } finally {
             setLoading(false);
@@ -378,7 +379,6 @@ const CandidateView = () => {
                 fetchApplications();
             }
         } catch (err) {
-            console.error("APPLY ERROR:", err);
             if (err.response && err.response.status === 400) {
                 notify(err.response.data?.message || "You have already applied for this job!", "error");
             } else {
@@ -807,7 +807,7 @@ const CandidateView = () => {
                                     <div key={job._id || index} className="job-wrapper" style={{ marginTop: '20px', display: 'block' }}>
                                         <JobCard
                                             job={job}
-                                            onApply={() => handleApply(job._id, job.matchScore || 0, job.candidateSkills || [])}
+                                            onApply={() => handleApply(job._id, job.matchScore || 0, job.matchedSkills || [])}
                                             isSaved={savedJobs.includes(job._id)}
                                             onToggleSave={toggleSavedJob}
                                             applicationStatus={currentStatus} 

@@ -21,9 +21,6 @@ const RecruiterView = () => {
     const [jobs, setJobs] = useState([]);
     const [applicants, setApplicants] = useState([]);
     const [trendsData, setTrendsData] = useState([]);
-    useEffect(() => {
-    console.log("TRENDS DATA:", trendsData);
-}, [trendsData]);
     const [editingId, setEditingId] = useState(null);
     const [toast, setToast] = useState(null);
     
@@ -60,9 +57,10 @@ const RecruiterView = () => {
             const res = await API.get('/api/jobs/search?q=', {
                 headers: { Authorization: `Bearer ${sessionToken}` }
             });
-            console.log("Jobs API Response 1:", res.data);
             setJobs(res.data);
-        } catch (err) {}
+        } catch {
+            setJobs([]);
+        }
     }, []); 
 
     const fetchApplicants = useCallback(async () => {
@@ -73,29 +71,13 @@ const RecruiterView = () => {
             const res = await API.get(`/api/jobs/applicants?t=${timestamp}`, {
                 headers: { Authorization: `Bearer ${sessionToken}` }
             });
-            console.log("Applicants API Response:", res.data);
             setApplicants(res.data.map(app => ({ ...app, refreshKey: Math.random() })));
-        } catch (err) {}
+        } catch {
+            setApplicants([]);
+        }
     }, []); 
 
-    // const fetchAnalytics = useCallback(async () => {
-    //     const sessionToken = localStorage.getItem('token');
-    //     if (!sessionToken) return;
-    //     try {
-    //         const headers = { Authorization: `Bearer ${sessionToken}` };
-    //         const res = await API.get("/api/analytics/application-trends", { headers });
-    //         console.log("Analytics API Response:", res.data);
-    //         setTrendsData(Array.isArray(res.data)
-    //             ? res.data
-    //             : []);
-    //     } catch (err) {
-    //         console.error("Analytics Fetch Error:", err);
-    //     }
-    // }, []); 
-
-    // --- FIXED: ONE-WAY ISOLATED MOUNT LIFECYCLE WRAPPER ---
-// --- FIXED BULLETPROOF INITIALIZATION LIFECYCLE ---
-// --- FIXED: ONE-WAY ISOLATED MOUNT LIFECYCLE WRAPPER ---
+// --- INITIAL DATA LOADING LIFECYCLE ---
 useEffect(() => {
     let isMounted = true;
     let intervalId = null;
@@ -120,26 +102,19 @@ useEffect(() => {
                 // FIXED: Direct mapping straight to your active view arrays
                 if (jobsRes?.data) setJobs(jobsRes.data);
                 if (appsRes?.data) setApplicants(appsRes.data.map(app => ({ ...app, refreshKey: Math.random() })));
-//                 console.log(
-//     "TRENDS RESPONSE:",
-//     trendsRes
-// );
-
-console.log(
-    "TRENDS DATA:",
-    trendsRes.data
-);
                 if (trendsRes?.data) setTrendsData(trendsRes.data || []);
             }
-        } catch (e) {
-            console.warn("Polling interrupted safely:", e.message);
+        } catch {
+            if (isMounted) {
+                setApplicants([]);
+            }
         }
     };
 
-    // 1. Initial fire execution window
+    // Initial dashboard data load.
     executeBatchLoad();
 
-    // 2. Clear out network loops by polling strictly every 30 seconds
+    // Keep recruiter dashboard data fresh without duplicate polling timers.
     intervalId = setInterval(executeBatchLoad, 30000);
 
     return () => {
@@ -148,8 +123,7 @@ console.log(
             clearInterval(intervalId);
         }
     };
-    // Keep empty to avoid infinite rendering cycles
-}, []); // Keep completely empty to ensure exactly one running timer instance
+}, []);
 
         const advancedFilteredApplicants = useMemo(() => {
         let result = [...applicants];
@@ -191,17 +165,7 @@ console.log(
         }
 
         return result;
-    }, [applicants, activeRecruiterTab, searchTerm, chartFilter, selectedJobFilter]);
-
-    // --- DATA TRANSFORMATION COMPUTE ENGINES ---
-    const analytics = useMemo(() => {
-        const accepted = advancedFilteredApplicants.filter(a => String(a.status || '').toLowerCase().trim() === 'accepted').length;
-        const rejected = advancedFilteredApplicants.filter(a => String(a.status || '').toLowerCase().trim() === 'rejected').length;
-        const pending  = advancedFilteredApplicants.filter(a => ['pending', 'applied'].includes(String(a.status || '').toLowerCase().trim())).length;
-        const reviewed = advancedFilteredApplicants.filter(a => String(a.status || '').toLowerCase().trim() === 'reviewed').length;
-        
-        return { accepted, rejected, pending, reviewed }; 
-    }, [advancedFilteredApplicants]);
+    }, [applicants, activeRecruiterTab, searchTerm, chartFilter, selectedJobFilter, skillFilter]);
 
     const averageMatch = useMemo(() => {
         if (!advancedFilteredApplicants.length) return 0;
@@ -313,14 +277,6 @@ console.log(
         };
     }, [advancedFilteredApplicants]);
 
-const dynamicTrendsFallback = useMemo(() => {
-
-    return Array.isArray(trendsData)
-        ? trendsData
-        : [{ date: "No Data", applications: 0 }];
-
-}, [trendsData]);
-
 const finalTrendsChartData = useMemo(() => {
     // If the backend successfully supplied trend analytics array data, use it!
     if (Array.isArray(trendsData) && trendsData.length > 0) {
@@ -342,18 +298,6 @@ const finalTrendsChartData = useMemo(() => {
         applications
     }));
 }, [trendsData, applicants]);
-
-useEffect(() => {
-    console.log("selectedJobFilter", selectedJobFilter);
-}, [selectedJobFilter]);
-
-useEffect(() => {
-    console.log("chartFilter", chartFilter);
-}, [chartFilter]);
-
-useEffect(() => {
-    console.log("skillFilter", skillFilter);
-}, [skillFilter]);
 
     const applicantsPerJobChart = useMemo(() => {
         const counts = {};
@@ -425,7 +369,7 @@ useEffect(() => {
             });
             fetchApplicants();
             notify(`Application status routed as ${status}.`);
-        } catch (error) {
+        } catch {
             notify("Failed to update status tracking vector.", "error");
         }
     };
@@ -436,19 +380,10 @@ useEffect(() => {
             await API.delete(`/api/jobs/${id}`, { headers: { Authorization: `Bearer ${token}` } });
             fetchAdminJobs();
             notify("Listing deleted successfully.");
-        } catch (err) {
+        } catch {
             notify("Delete transaction failure.", "error");
         }
     };
-
-    console.log("APPLICANTS:", applicants.length);
-console.log("FILTERED:", advancedFilteredApplicants.length);
-console.log("TRENDS:", trendsData);
-console.log("FILTERS:", {
-    selectedJobFilter,
-    chartFilter,
-    skillFilter
-});
 
     return (
         <div className="recruiter-container">

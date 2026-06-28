@@ -15,7 +15,8 @@ const MyApplications = () => {
                 if (!userId) return;
                 const res = await API.get(`/api/jobs/my-applications/${userId}`);
                 setApps(res.data);
-            } catch (err) {
+            } catch {
+                setApps([]);
             } finally {
                 setLoading(false);
             }
@@ -25,8 +26,8 @@ const MyApplications = () => {
 
     const getStatusStyle = (status) => {
         switch(status) {
-            case 'Accepted': return { color: '#4caf50', background: 'rgba(76, 175, 80, 0.1)' };
-            case 'Rejected': return { color: '#f44336', background: 'rgba(244, 67, 54, 0.1)' };
+            case 'accepted': return { color: '#4caf50', background: 'rgba(76, 175, 80, 0.1)' };
+            case 'rejected': return { color: '#f44336', background: 'rgba(244, 67, 54, 0.1)' };
             default: return { color: '#646cff', background: 'rgba(100, 108, 255, 0.1)' };
         }
     };

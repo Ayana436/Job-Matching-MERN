@@ -33,13 +33,15 @@ const ApplicantsList = () => {
 
 useEffect(() => {
 
-    fetchApplicants().catch((err) => {
+    fetchApplicants().catch(() => {
+        notify("Unable to refresh applications.", "error");
     });
 
     // AUTO REFRESH
     const interval = setInterval(() => {
 
-        fetchApplicants().catch((err) => {
+        fetchApplicants().catch(() => {
+            notify("Unable to refresh applications.", "error");
         });
 
     }, 15000);
@@ -67,7 +69,7 @@ const handleStatusUpdate = async (applicationId, newStatus) => {
         notify(`Application ${newStatus}.`);
 
         await fetchApplicants();
-    } catch (err) {
+    } catch {
         notify("Failed to update status.", "error");
     }
 };

@@ -45,15 +45,15 @@ const JobCard = ({
     const getButtonText = () => {
         if (!currentStatus) return "Quick Apply";
 
-        if (currentStatus === "Pending") {
+        if (currentStatus === "pending") {
             return "Pending Review";
         }
 
-        if (currentStatus === "Accepted") {
+        if (currentStatus === "accepted") {
             return "Accepted";
         }
 
-        if (currentStatus === "Rejected") {
+        if (currentStatus === "rejected") {
             return "Rejected";
         }
 

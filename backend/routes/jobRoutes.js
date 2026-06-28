@@ -78,24 +78,42 @@ const normalizeJobPayload = (body) => ({
         : String(body.requiredSkills || '').split(',').map(skill => skill.trim()).filter(Boolean)
 });
 
-// --- NEW: GET ALL JOBS (Base Route) ---
+// --- Job Listing Logic ---
 router.get('/', protect, authorize('recruiter', 'admin', 'candidate'), async (req, res) => {
     try {
-        console.log("User id:", req.user.id);
-        const jobs = await Job.find({
-            postedBy: req.user.id
-        }).sort({ createdAt: -1 }).lean();
 
-        console.log("RECRUITER JOBS:", jobs.length);
-        // We map them so the frontend always sees a 'matchScore' even if 0
+        let jobs;
+
+        if (req.user.role === "candidate") {
+
+            jobs = await Job.find({})
+                .sort({ createdAt: -1 })
+                .lean();
+
+        } else {
+
+            jobs = await Job.find({
+                postedBy: req.user.id
+            })
+            .sort({ createdAt: -1 })
+            .lean();
+
+        }
+
         const processedJobs = jobs.map(job => ({
             ...job,
             matchScore: 0,
             aiSummary: "Upload a resume to see AI matching details."
         }));
+
         res.status(200).json(processedJobs);
+
     } catch (err) {
-        res.status(500).json({ error: 'Failed to fetch jobs' });
+
+        res.status(500).json({
+            error: "Failed to fetch jobs"
+        });
+
     }
 });
 
@@ -403,12 +421,8 @@ router.put('/:id', protect, authorize('recruiter', 'admin'), async (req, res) =>
 // --- Route for Quick Apply (Candidate) ---
 router.post('/apply', protect, authorize('candidate'), async (req, res) => {
         try {
-            console.log("APPLY BODY:", req.body);
-        console.log("USER:", req.user);
             const {
                 jobId,
-                jobTitle,
-                jobSkills,
                 matchScore = 0,
                 candidateSkills = []
             } = req.body;
@@ -472,7 +486,6 @@ router.post('/apply', protect, authorize('candidate'), async (req, res) => {
             });
 
         } catch (err) {
-            console.error("Apply error:", err);
             return res.status(500).json({
                 error: err.message || "Failed to submit application"
             });
@@ -481,7 +494,7 @@ router.post('/apply', protect, authorize('candidate'), async (req, res) => {
 );
 
 // Creates resume history API
-router.get('/resume-history', protect, authorize('candidate', 'recruiter'), async (req, res) => {
+router.get('/resume-history', protect, authorize('candidate'), async (req, res) => {
         try {
             const history = await ResumeHistory.find({
                 candidateId: req.user.id
@@ -509,8 +522,8 @@ router.get('/my-applications/:candidateId', protect, async (req, res) => {
             return res.status(400).json({ error: "Invalid candidate id" });
         }
 
-        // Candidate can only view own applications, recruiters can view all
-        if (req.user.role !== 'recruiter' && String(req.user.id) !== String(candidateId)) {
+        // Candidate can only view own applications; recruiters/admins can inspect applicant histories.
+        if (!['recruiter', 'admin'].includes(req.user.role) && String(req.user.id) !== String(candidateId)) {
             return res.status(403).json({ error: "You can only view your own applications" });
         }
 
@@ -556,13 +569,9 @@ router.get(
                 )
                 .sort({ createdAt: -1 });
 
-            console.log("TOTAL APPS:", apps.length);
-
             return res.status(200).json(apps);
 
         } catch (err) {
-
-            console.error(err);
 
             return res.status(500).json({
                 error: err.message
